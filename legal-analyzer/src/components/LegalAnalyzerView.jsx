@@ -503,46 +503,46 @@ const LegalAnalyzerView = ({
           </div>
         )}
 
-        {/* CHAT TAB */}
-        {activeTab === 'chat' && (
-          <div className="grid lg:grid-cols-3 gap-6 h-[600px]">
-            <div className="lg:col-span-2">
-              <ChatInterface 
-                chatHistory={chatHistory}
-                onSendMessage={handleChatSubmit}
-                loading={chatLoading}
-              />
-            </div>
-            
-            {/* Document Context Panel */}
-            <div className="hidden lg:block bg-slate-900 border border-slate-700 rounded-xl p-4 overflow-hidden flex flex-col">
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700">
-                <Eye className="w-4 h-4 text-blue-400" />
-                <h3 className="font-semibold text-white">Document Context</h3>
+  {/* CHAT TAB */}
+{activeTab === 'chat' && (
+  <div className="flex gap-6 h-[calc(100vh-160px)]">
+    <div className="flex-1 min-w-0">
+      <ChatInterface 
+        chatHistory={chatHistory}
+        onSendMessage={handleChatSubmit}
+        loading={chatLoading}
+      />
+    </div>
+    
+    {/* Document Context Panel */}
+    <div className="hidden lg:block w-80 bg-slate-900 border border-slate-700 rounded-xl p-4 overflow-hidden flex flex-col">
+      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-700">
+        <Eye className="w-4 h-4 text-blue-400" />
+        <h3 className="font-semibold text-white">Document Context</h3>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <div className="text-xs text-slate-400 font-mono whitespace-pre-wrap leading-relaxed">
+          {text ? (
+            <div className="space-y-2">
+              <div className="p-2 bg-slate-800 rounded-lg">
+                <strong>Document Preview:</strong>
+                <p className="mt-1 text-slate-300">{text.substring(0, 500)}...</p>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                <div className="text-xs text-slate-400 font-mono whitespace-pre-wrap leading-relaxed">
-                  {text ? (
-                    <div className="space-y-2">
-                      <div className="p-2 bg-slate-800 rounded-lg">
-                        <strong>Document Preview:</strong>
-                        <p className="mt-1 text-slate-300">{text.substring(0, 500)}...</p>
-                      </div>
-                      <div className="p-2 bg-slate-800 rounded-lg">
-                        <strong>Analysis Context:</strong>
-                        <p className="mt-1 text-slate-300">
-                          {enhancedAnalysis?.summary?.substring(0, 200)}...
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 italic">No document loaded</p>
-                  )}
-                </div>
+              <div className="p-2 bg-slate-800 rounded-lg">
+                <strong>Analysis Context:</strong>
+                <p className="mt-1 text-slate-300">
+                  {enhancedAnalysis?.summary?.substring(0, 200)}...
+                </p>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-slate-500 italic">No document loaded</p>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
