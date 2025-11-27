@@ -1,14 +1,24 @@
 import React, { useState, useRef } from 'react';
 import LegalAnalyzerView from './LegalAnalyzerView';
+import { extractTextFromPDF } from '../utils/pdfUtils';
 
 const LegalAnalyzer = () => {
+  // State
   const [file, setFile] = useState(null);
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('upload');
+  
+  // Chat State
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+
   const fileInputRef = useRef(null);
+
+  // Use Environment Variable
+  const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL;
 
   const handleFileUpload = async (e) => {
     const uploadedFile = e.target.files[0];
@@ -16,20 +26,29 @@ const LegalAnalyzer = () => {
 
     setError('');
     setFile(uploadedFile);
+    setLoading(true); // Show loading while parsing PDF
 
-    if (uploadedFile.type === 'text/plain') {
-      const reader = new FileReader();
-      reader.onload = (e) => setText(e.target.result);
-      reader.readAsText(uploadedFile);
-    } else {
-      // Fallback for non-txt files (e.g., PDF placeholders)
-      setText(`[${uploadedFile.type}] uploaded. Click "Analyze Contract" to attempt processing.`);
+    try {
+      if (uploadedFile.type === 'application/pdf') {
+        const extractedText = await extractTextFromPDF(uploadedFile);
+        setText(extractedText);
+      } else if (uploadedFile.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (e) => setText(e.target.result);
+        reader.readAsText(uploadedFile);
+      } else {
+        setError('Unsupported file format. Please upload PDF or TXT.');
+      }
+    } catch (err) {
+      setError('Error reading file: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const analyzeContract = async () => {
-    if (!text && !file) {
-      setError('Please upload a document or paste text first.');
+    if (!text) {
+      setError('No document content found.');
       return;
     }
 
@@ -38,85 +57,79 @@ const LegalAnalyzer = () => {
     setAnalysis(null);
 
     try {
-      let documentContent = text;
-
-      // If no text in textarea and file exists, read the file explicitly
-      if (!documentContent && file) {
-        const fileReader = new FileReader();
-        documentContent = await new Promise((resolve, reject) => {
-          fileReader.onload = (e) => resolve(e.target.result);
-          fileReader.onerror = reject;
-          fileReader.readAsText(file);
-        });
-      }
-
-      // YOUR CLOUDFLARE WORKER URL
-      const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL;
-
       const response = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           max_tokens: 4000,
           temperature: 0.2,
-          top_p: 0.8,
           messages: [
             {
               role: 'user',
-              content: `You are an expert legal analyst. Analyze the following contract/legal document and provide a comprehensive analysis in JSON format with these sections:
-
-1. summary: Brief overview of the document (string)
-2. documentType: Type of legal document (string)
-3. parties: Array of parties involved (strings or objects with name/role)
-4. keyTerms: Array of important terms (strings)
-5. obligations: Array of obligations (strings or objects with party/obligations)
-6. risks: Array of potential risks (strings)
-7. recommendations: Array of recommendations (strings)
-8. expiryDate: Expiration date or "N/A" (string)
-9. jurisdiction: Jurisdiction or "Unknown" (string)
-
-Document to analyze:
-
-${documentContent}
-
-Respond ONLY with valid JSON. No markdown.`
+              content: `Analyze this legal document and return valid JSON (no markdown) with these keys: summary, documentType, parties, keyTerms, obligations, risks, recommendations, expiryDate, jurisdiction. \n\nDocument:\n${text}`
             }
           ]
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `API request failed: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const data = await response.json();
+      let content = data.choices?.[0]?.message?.content || '';
+      content = content.replace(/```json|```/g, '').trim();
       
-      let analysisText = data.choices?.[0]?.message?.content || '';
-      if (!analysisText) throw new Error('No content in response');
-      
-      // Clean up markdown if AI adds it despite instructions
-      analysisText = analysisText.replace(/```json|```/g, '').trim();
-      
-      const parsedAnalysis = JSON.parse(analysisText);
-      setAnalysis(parsedAnalysis);
+      setAnalysis(JSON.parse(content));
       setActiveTab('results');
     } catch (err) {
-      console.error('Analysis error:', err);
-      setError(`Analysis failed: ${err.message}. Please try again.`);
+      console.error(err);
+      setError('Analysis failed. Please check the console or try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChatSubmit = async (userMessage) => {
+    setChatLoading(true);
+    
+    // Optimistically add user message
+    const newHistory = [...chatHistory, { role: 'user', content: userMessage }];
+    setChatHistory(newHistory);
+
+    try {
+      const response = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          max_tokens: 1000,
+          temperature: 0.5,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a helpful legal assistant. Answer questions based specifically on the following contract text. Be concise and precise.\n\nCONTRACT CONTEXT:\n${text}`
+            },
+            ...newHistory.map(msg => ({ role: msg.role, content: msg.content }))
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const botReply = data.choices?.[0]?.message?.content || "I couldn't process that request.";
+
+      setChatHistory(prev => [...prev, { role: 'assistant', content: botReply }]);
+    } catch (err) {
+      setChatHistory(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error connecting to the AI." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const exportAnalysis = () => {
     if (!analysis) return;
-    const dataStr = JSON.stringify(analysis, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(analysis, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `legal-analysis-${Date.now()}.json`;
+    link.download = `legal-analysis.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -125,12 +138,11 @@ Respond ONLY with valid JSON. No markdown.`
     setFile(null);
     setText('');
     setAnalysis(null);
-    setError('');
+    setChatHistory([]);
     setActiveTab('upload');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Pass everything to the View
   return (
     <LegalAnalyzerView 
       file={file}
@@ -146,6 +158,9 @@ Respond ONLY with valid JSON. No markdown.`
       analyzeContract={analyzeContract}
       resetAnalysis={resetAnalysis}
       exportAnalysis={exportAnalysis}
+      chatHistory={chatHistory}
+      handleChatSubmit={handleChatSubmit}
+      chatLoading={chatLoading}
     />
   );
 };
