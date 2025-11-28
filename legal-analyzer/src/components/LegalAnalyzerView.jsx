@@ -1,692 +1,539 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-	FileText,
-	Upload,
-	AlertTriangle,
-	CheckCircle,
-	XCircle,
-	Brain,
-	Loader2,
-	Download,
-	Trash2,
-	ShieldAlert,
-	Scale,
-	Calendar,
-	Globe,
-	MessageSquare,
-	Eye,
-	TrendingUp,
-	AlertCircle,
-	Users,
-	Clock,
-	ChevronRight,
-	Zap,
-	Shield,
-	DollarSign,
-	FileCheck,
-	Sparkles,
-	Search,
-	Filter,
-	Bookmark,
-	Share,
+  FileText, Upload, AlertTriangle, CheckCircle, XCircle, Brain,
+  Loader2, Download, Trash2, ShieldAlert, Scale, Calendar, Globe,
+  MessageSquare, Eye, TrendingUp, AlertCircle, Users, Clock,
+  ChevronRight, Zap, Shield, DollarSign, FileCheck, Sparkles,
+  Search, Filter, Bookmark, Share, RotateCcw, Heart, BookOpen,
+  Mic, MicOff, Send, Paperclip, Copy, Gavel
 } from 'lucide-react';
-import ChatInterface from './ChatInterface';
 
-// Safe Render Helper
+// --- SUB-COMPONENTS ---
+
 const SafeRender = ({ data }) => {
-	if (!data) return null;
-	if (typeof data === 'string') return <span>{data}</span>;
-	if (typeof data === 'object') {
-		return (
-			<div className='space-y-1'>
-				{data.party && (
-					<span className='text-xs font-bold text-blue-300'>{data.party}</span>
-				)}
-				{data.name && <span className='font-semibold'>{data.name}</span>}
-				{data.role && (
-					<span className='text-xs italic opacity-80'>({data.role})</span>
-				)}
-				{data.obligations && Array.isArray(data.obligations) && (
-					<ul className='list-disc list-inside space-y-1 text-slate-300'>
-						{data.obligations.map((ob, i) => (
-							<li key={i}>{ob}</li>
-						))}
-					</ul>
-				)}
-			</div>
-		);
-	}
-	return null;
+  if (!data) return null;
+  if (typeof data === 'string') return <span>{data}</span>;
+  if (typeof data === 'object') {
+    return (
+      <div className='space-y-1'>
+        {data.party && <span className='text-xs font-bold text-blue-300 block'>{data.party}</span>}
+        {data.name && <span className='font-semibold block'>{data.name}</span>}
+        {data.role && <span className='text-xs italic opacity-80 block'>({data.role})</span>}
+        {data.obligations && Array.isArray(data.obligations) && (
+          <ul className='list-disc list-inside space-y-1 text-slate-300 mt-1'>
+            {data.obligations.map((ob, i) => <li key={i}>{ob}</li>)}
+          </ul>
+        )}
+      </div>
+    );
+  }
+  return null;
 };
 
-// Enhanced Search and Filter Component
-const SearchFilter = ({ onSearch, onFilter }) => {
-	const [searchQuery, setSearchQuery] = useState('');
-	const [filters, setFilters] = useState({
-		riskLevel: 'all',
-		category: 'all',
-		date: 'all',
-	});
+// --- NEW CHAT INTERFACE COMPONENT ---
 
-	return (
-		<div className='flex flex-col sm:flex-row gap-3 p-4 bg-slate-800 rounded-lg border border-slate-700'>
-			<div className='flex-1 relative'>
-				<Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400' />
-				<input
-					type='text'
-					placeholder='Search clauses, terms, or obligations...'
-					value={searchQuery}
-					onChange={(e) => {
-						setSearchQuery(e.target.value);
-						onSearch(e.target.value);
-					}}
-					className='w-full bg-slate-700 border border-slate-600 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-blue-500'
-				/>
-			</div>
-			<div className='flex gap-2'>
-				<select
-					className='bg-slate-700 border border-slate-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500 text-sm'
-					value={filters.riskLevel}
-					onChange={(e) => {
-						const newFilters = { ...filters, riskLevel: e.target.value };
-						setFilters(newFilters);
-						onFilter(newFilters);
-					}}
-				>
-					<option value='all'>All Risks</option>
-					<option value='high'>High Risk</option>
-					<option value='medium'>Medium Risk</option>
-					<option value='low'>Low Risk</option>
-				</select>
-				<button className='flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors'>
-					<Filter className='w-4 h-4 text-slate-300' />
-					<span className='text-sm text-slate-300'>Filter</span>
-				</button>
-			</div>
-		</div>
-	);
-};
-
-// Enhanced Bookmark and Share Features
-const DocumentTools = ({ onBookmark, onShare, onExport }) => {
-	const [bookmarked, setBookmarked] = useState(false);
-
-	return (
-		<div className='flex items-center gap-2'>
-			<button
-				onClick={() => {
-					setBookmarked(!bookmarked);
-					onBookmark && onBookmark();
-				}}
-				className={`p-2 rounded-lg border transition-colors ${
-					bookmarked
-						? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
-						: 'bg-slate-700 border-slate-600 text-slate-400 hover:bg-slate-600'
-				}`}
-			>
-				<Bookmark
-					className='w-4 h-4'
-					fill={bookmarked ? 'currentColor' : 'none'}
-				/>
-			</button>
-			<button
-				onClick={onShare}
-				className='p-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg transition-colors text-slate-400 hover:text-white'
-			>
-				<Share className='w-4 h-4' />
-			</button>
-			<button
-				onClick={onExport}
-				className='flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors'
-			>
-				<Download className='w-4 h-4' />
-				<span className='text-sm font-medium'>Export</span>
-			</button>
-		</div>
-	);
-};
-
-// Main Enhanced Component
-const LegalAnalyzerView = ({
-	file,
-	text,
-	setText,
-	analysis,
-	loading,
-	error,
-	activeTab,
-	setActiveTab,
-	fileInputRef,
-	handleFileUpload,
-	analyzeContract,
-	resetAnalysis,
-	exportAnalysis,
-	chatHistory,
-	handleChatSubmit,
-	chatLoading,
+const ChatInterface = ({ 
+  chatHistory = [], 
+  onSendMessage, 
+  loading, 
+  documentText, 
+  onRegenerate 
 }) => {
-	const [hoveredRisk, setHoveredRisk] = useState(null);
-	const [searchQuery, setSearchQuery] = useState('');
-	const [filters, setFilters] = useState({});
+  const [input, setInput] = useState('');
+  const bottomRef = useRef(null);
 
-	// Enhanced analysis data with more detailed structure
-	const enhancedAnalysis = analysis
-		? {
-				...analysis,
-				metadata: {
-					analyzedAt: new Date().toISOString(),
-					documentSize: text?.length || 0,
-					confidence: 0.94,
-					version: '2.1.0',
-				},
-				recommendations: analysis.recommendations || [
-					'Review liability limitations carefully',
-					'Consider adding dispute resolution clause',
-					'Verify payment terms alignment',
-				],
-		  }
-		: null;
+  // Auto-scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory, loading]);
 
-	return (
-		<div className='min-h-screen bg-slate-950 text-slate-200'>
-			{/* Professional Navigation */}
-			<nav className='sticky top-0 z-50 bg-slate-900 border-b border-slate-800 backdrop-blur-sm'>
-				<div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
-					<div className='flex items-center gap-3'>
-						<div className='p-2 bg-blue-600 rounded-lg'>
-							<Scale className='w-6 h-6 text-white' />
-						</div>
-						<div>
-							<span className='text-xl font-bold text-white'>
-								Legal<span className='text-blue-400'>Mind</span> Pro
-							</span>
-							<p className='text-xs text-slate-500'>
-								AI-Powered Contract Analysis
-							</p>
-						</div>
-					</div>
+  const handleSend = () => {
+    if (!input.trim()) return;
+    onSendMessage(input);
+    setInput('');
+  };
 
-					{enhancedAnalysis && (
-						<div className='flex items-center gap-3'>
-							<DocumentTools
-								onExport={exportAnalysis}
-								onShare={() => console.log('Share analysis')}
-								onBookmark={() => console.log('Bookmark analysis')}
-							/>
-							<button
-								onClick={resetAnalysis}
-								className='flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors border border-slate-700'
-							>
-								<Trash2 className='w-4 h-4' />
-								<span className='text-sm font-medium'>New Analysis</span>
-							</button>
-						</div>
-					)}
-				</div>
-			</nav>
+  const SuggestedQuery = ({ text }) => (
+    <button 
+      onClick={() => setInput(text)}
+      className="text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 px-3 py-1.5 rounded-full transition-colors"
+    >
+      {text}
+    </button>
+  );
 
-			<div className='max-w-7xl mx-auto px-6 py-8'>
-				{/* Enhanced Tab Navigation */}
-				<div className='flex gap-1 mb-8 bg-slate-800 p-1 rounded-lg border border-slate-700 w-fit'>
-					{[
-						{
-							id: 'upload',
-							label: 'Upload',
-							icon: Upload,
-							desc: 'Add document',
-						},
-						{
-							id: 'results',
-							label: 'Analysis',
-							icon: Brain,
-							desc: 'View insights',
-							disabled: !analysis,
-						},
-						{
-							id: 'chat',
-							label: 'AI Chat',
-							icon: MessageSquare,
-							desc: 'Ask questions',
-							disabled: !analysis,
-						},
-					].map((tab) => (
-						<button
-							key={tab.id}
-							onClick={() => setActiveTab(tab.id)}
-							disabled={tab.disabled}
-							className={`relative px-4 py-3 rounded-md font-medium transition-all min-w-[120px] ${
-								activeTab === tab.id
-									? 'bg-slate-700 text-white shadow-sm'
-									: 'text-slate-400 hover:text-white hover:bg-slate-700/50 disabled:opacity-30'
-							}`}
-						>
-							<div className='flex items-center gap-2'>
-								<tab.icon className='w-4 h-4' />
-								<div className='text-left'>
-									<div className='text-sm font-semibold'>{tab.label}</div>
-									<div className='text-xs opacity-70'>{tab.desc}</div>
-								</div>
-							</div>
-						</button>
-					))}
-				</div>
+  return (
+    <div className="flex flex-col h-full bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden relative">
+      
+      {/* 1. Chat Header */}
+      <div className="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-900/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-blue-600 rounded-lg">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">Legal Copilot</h3>
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-xs text-slate-400">Online • Context Aware</span>
+            </div>
+          </div>
+        </div>
+        <button onClick={onRegenerate} title="Reset Context" className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+          <RotateCcw className="w-4 h-4" />
+        </button>
+      </div>
 
-				{/* UPLOAD TAB */}
-				{activeTab === 'upload' && (
-					<div className='max-w-4xl mx-auto'>
-						<div className='bg-slate-900 border border-slate-700 rounded-xl p-8 shadow-lg'>
-							<div className='text-center mb-8'>
-								<div className='p-4 bg-blue-600/20 rounded-2xl inline-block mb-4'>
-									<FileText className='w-12 h-12 text-blue-400' />
-								</div>
-								<h2 className='text-3xl font-bold text-white mb-2'>
-									Upload Legal Document
-								</h2>
-								<p className='text-slate-400'>
-									AI-powered analysis for contracts and agreements
-								</p>
-							</div>
+      {/* 2. Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {chatHistory.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60">
+            <div className="p-4 bg-slate-800 rounded-full">
+              <MessageSquare className="w-8 h-8 text-slate-400" />
+            </div>
+            <div>
+              <p className="text-slate-300 font-medium">No messages yet</p>
+              <p className="text-sm text-slate-500 max-w-xs mx-auto mt-1">
+                Ask questions about liability, termination clauses, or specific definitions within the document.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 max-w-md">
+              <SuggestedQuery text="Summarize the indemnity clause" />
+              <SuggestedQuery text="What are the termination conditions?" />
+              <SuggestedQuery text="List all defined terms" />
+            </div>
+          </div>
+        ) : (
+          chatHistory.map((msg, idx) => (
+            <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {/* Avatar */}
+              <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                msg.role === 'user' ? 'bg-blue-600' : 'bg-slate-700'
+              }`}>
+                {msg.role === 'user' ? <Users className="w-4 h-4 text-white" /> : <Gavel className="w-4 h-4 text-blue-300" />}
+              </div>
 
-							<div className='grid md:grid-cols-2 gap-6 mb-6'>
-								{/* File Upload Zone */}
-								<div className='relative group cursor-pointer'>
-									<input
-										ref={fileInputRef}
-										type='file'
-										accept='.txt,.pdf,.doc,.docx'
-										onChange={handleFileUpload}
-										className='absolute inset-0 opacity-0 cursor-pointer z-10'
-									/>
-									<div className='h-64 border-2 border-dashed border-slate-600 group-hover:border-blue-500 bg-slate-800/50 group-hover:bg-slate-800 rounded-xl transition-all flex flex-col items-center justify-center p-6'>
-										<div className='p-4 bg-blue-600/20 rounded-2xl mb-4'>
-											<Upload className='w-8 h-8 text-blue-400' />
-										</div>
-										{file ? (
-											<div className='text-center space-y-2'>
-												<div className='flex items-center gap-2 px-4 py-2 bg-green-600/20 border border-green-600/30 rounded-lg'>
-													<CheckCircle className='w-4 h-4 text-green-400' />
-													<span className='text-green-300 text-sm font-medium'>
-														{file.name}
-													</span>
-												</div>
-												<p className='text-xs text-slate-500'>
-													Click to replace file
-												</p>
-											</div>
-										) : (
-											<div className='text-center space-y-2'>
-												<p className='text-white font-semibold'>
-													Drop file here
-												</p>
-												<p className='text-slate-400 text-sm'>
-													or click to browse
-												</p>
-												<p className='text-xs text-slate-500 mt-2'>
-													Supports: PDF, DOC, TXT • Max 10MB
-												</p>
-											</div>
-										)}
-									</div>
-								</div>
+              {/* Bubble */}
+              <div className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                  msg.role === 'user' 
+                    ? 'bg-blue-600 text-white rounded-tr-none' 
+                    : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'
+                }`}>
+                  {msg.content}
+                </div>
+                {/* Timestamp / Meta */}
+                <span className="text-[10px] text-slate-500 mt-1 px-1">
+                  {msg.role === 'assistant' ? 'AI Legal Assistant' : 'You'} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+        
+        {loading && (
+          <div className="flex gap-4">
+            <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+            </div>
+            <div className="bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl rounded-tl-none">
+              <div className="flex space-x-1 h-5 items-center">
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
 
-								{/* Text Input Area */}
-								<div className='flex flex-col'>
-									<label className='text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2'>
-										<FileCheck className='w-4 h-4 text-blue-400' />
-										Or paste contract text
-									</label>
-									<textarea
-										value={text}
-										onChange={(e) => setText(e.target.value)}
-										placeholder='Paste your contract text here for instant analysis...'
-										className='flex-1 bg-slate-800 border border-slate-600 rounded-xl p-4 text-slate-200 resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors placeholder:text-slate-500'
-										rows={12}
-									/>
-								</div>
-							</div>
+      {/* 3. Input Area */}
+      <div className="p-4 bg-slate-900 border-t border-slate-800">
+        <div className="relative flex items-end gap-2 bg-slate-800 border border-slate-700 rounded-xl p-2 focus-within:ring-2 focus-within:ring-blue-600/50 focus-within:border-blue-500 transition-all shadow-lg">
+          <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors" title="Attach context">
+            <Paperclip className="w-5 h-5" />
+          </button>
+          
+          <textarea 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Ask a legal question about this contract..."
+            className="flex-1 bg-transparent border-none text-slate-200 placeholder:text-slate-500 focus:ring-0 resize-none py-2 max-h-32 text-sm"
+            rows={1}
+            style={{ minHeight: '40px' }}
+          />
+          
+          <button 
+            onClick={handleSend}
+            disabled={!input.trim() || loading}
+            className="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-[10px] text-center text-slate-600 mt-2">
+          AI generated responses may contain inaccuracies. Verify with legal counsel.
+        </p>
+      </div>
+    </div>
+  );
+};
 
-							{error && (
-								<div className='bg-red-600/20 border border-red-600/30 rounded-xl p-4 flex items-start gap-3 mb-6'>
-									<AlertTriangle className='w-5 h-5 text-red-400 flex-shrink-0 mt-0.5' />
-									<div>
-										<p className='text-red-300 font-semibold mb-1'>
-											Analysis Error
-										</p>
-										<p className='text-red-200/80 text-sm'>{error}</p>
-									</div>
-								</div>
-							)}
+// --- MAIN PARENT COMPONENT ---
 
-							<button
-								onClick={analyzeContract}
-								disabled={loading || (!text && !file)}
-								className='w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-colors shadow-lg'
-							>
-								{loading ? (
-									<>
-										<Loader2 className='w-5 h-5 animate-spin' />
-										<span>Analyzing Document...</span>
-									</>
-								) : (
-									<>
-										<Zap className='w-5 h-5' />
-										<span>Analyze Contract with AI</span>
-									</>
-								)}
-							</button>
-						</div>
-					</div>
-				)}
+const LegalAnalyzerView = ({
+  file,
+  text,
+  setText,
+  analysis,
+  loading,
+  error,
+  activeTab = 'upload', // Default value
+  setActiveTab,
+  fileInputRef,
+  handleFileUpload,
+  analyzeContract,
+  resetAnalysis,
+  exportAnalysis,
+  chatHistory = [],
+  handleChatSubmit,
+  chatLoading,
+  onRegenerate,
+}) => {
+  const [hoveredRisk, setHoveredRisk] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Placeholder analysis data if null (for visualization purposes)
+  const enhancedAnalysis = analysis || (text ? {
+    metadata: { confidence: 0.94 },
+    summary: "Analysis pending...",
+    risks: [],
+    obligations: []
+  } : null);
 
-				{/* RESULTS TAB */}
-				{activeTab === 'results' && enhancedAnalysis && (
-					<div className='space-y-6'>
-						{/* Search and Filter */}
-						<SearchFilter onSearch={setSearchQuery} onFilter={setFilters} />
+  const StatCard = ({ label, value, icon: Icon, color }) => (
+    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-4 hover:border-slate-600 transition-colors">
+      <div className={`p-3 bg-${color}-500/10 rounded-lg`}>
+        <Icon className={`w-6 h-6 text-${color}-400`} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
+      </div>
+    </div>
+  );
 
-						{/* Stats Dashboard */}
-						<div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-							{[
-								{
-									label: 'Critical Risks',
-									value: enhancedAnalysis.risks?.length || 0,
-									icon: ShieldAlert,
-									color: 'red',
-								},
-								{
-									label: 'Obligations',
-									value: enhancedAnalysis.obligations?.length || 0,
-									icon: Scale,
-									color: 'amber',
-								},
-								{
-									label: 'Key Terms',
-									value: enhancedAnalysis.keyTerms?.length || 0,
-									icon: FileCheck,
-									color: 'blue',
-								},
-								{
-									label: 'Confidence',
-									value: `${(
-										enhancedAnalysis.metadata.confidence * 100
-									).toFixed(0)}%`,
-									icon: TrendingUp,
-									color: 'green',
-								},
-							].map((stat, i) => (
-								<div
-									key={i}
-									className='bg-slate-900 border border-slate-700 rounded-xl p-4'
-								>
-									<div className='flex items-center justify-between mb-3'>
-										<div className={`p-2 bg-${stat.color}-600/20 rounded-lg`}>
-											<stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
-										</div>
-										<TrendingUp className='w-4 h-4 text-green-400' />
-									</div>
-									<div>
-										<p className='text-2xl font-bold text-white mb-1'>
-											{stat.value}
-										</p>
-										<p className='text-sm text-slate-400'>{stat.label}</p>
-									</div>
-								</div>
-							))}
-						</div>
+  return (
+    <div className='min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30'>
+      
+      {/* 1. PROFESSIONAL NAVIGATION */}
+      <nav className='sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800'>
+        <div className='max-w-7xl mx-auto px-6 h-16 flex items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <div className='p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-lg shadow-blue-900/20'>
+              <Scale className='w-5 h-5 text-white' />
+            </div>
+            <div>
+              <span className='text-lg font-bold text-white tracking-tight'>
+                Legal<span className='text-blue-400'>Mind</span> Pro
+              </span>
+            </div>
+          </div>
 
-						<div className='grid lg:grid-cols-3 gap-6'>
-							{/* Main Content */}
-							<div className='lg:col-span-2 space-y-6'>
-								{/* Executive Summary */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-6'>
-									<div className='flex items-center justify-between mb-4'>
-										<div className='flex items-center gap-3'>
-											<div className='p-2 bg-blue-600/20 rounded-lg'>
-												<Brain className='w-5 h-5 text-blue-400' />
-											</div>
-											<div>
-												<h3 className='text-xl font-bold text-white'>
-													Executive Summary
-												</h3>
-												<p className='text-sm text-slate-500'>
-													AI-generated overview
-												</p>
-											</div>
-										</div>
-										<span className='px-3 py-1 bg-blue-600/20 text-blue-300 rounded-lg border border-blue-600/30 text-sm font-semibold'>
-											{enhancedAnalysis.documentType || 'Legal Document'}
-										</span>
-									</div>
-									<p className='text-slate-300 leading-relaxed'>
-										{enhancedAnalysis.summary}
-									</p>
-								</div>
+          <div className='flex items-center gap-4'>
+            {enhancedAnalysis && (
+              <>
+                <div className='h-6 w-px bg-slate-700 hidden sm:block'></div>
+                <button
+                  onClick={resetAnalysis}
+                  className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors'
+                >
+                  <Trash2 className='w-3.5 h-3.5' />
+                  Reset
+                </button>
+                <button
+                  onClick={exportAnalysis}
+                  className='flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg transition-colors'
+                >
+                  <Download className='w-3.5 h-3.5' />
+                  Export
+                </button>
+              </>
+            )}
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+              <span className="text-xs font-bold text-slate-400">JD</span>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-								{/* Critical Risks */}
-								<div className='bg-slate-900 border border-red-600/20 rounded-xl p-6'>
-									<div className='flex items-center gap-3 mb-4'>
-										<div className='p-2 bg-red-600/20 rounded-lg'>
-											<ShieldAlert className='w-5 h-5 text-red-400' />
-										</div>
-										<div>
-											<h3 className='text-xl font-bold text-red-100'>
-												Critical Risks
-											</h3>
-											<p className='text-sm text-red-300/60'>
-												Requires immediate attention
-											</p>
-										</div>
-									</div>
-									<div className='space-y-3'>
-										{enhancedAnalysis.risks?.map((risk, i) => (
-											<div
-												key={i}
-												onMouseEnter={() => setHoveredRisk(i)}
-												onMouseLeave={() => setHoveredRisk(null)}
-												className={`flex gap-3 p-4 bg-red-600/10 hover:bg-red-600/15 border border-red-600/20 rounded-lg transition-all ${
-													hoveredRisk === i ? 'border-red-600/40' : ''
-												}`}
-											>
-												<div className='flex-shrink-0 p-2 bg-red-600/20 rounded-lg h-fit'>
-													<AlertCircle className='w-4 h-4 text-red-400' />
-												</div>
-												<div className='flex-1'>
-													<div className='flex items-start justify-between mb-2'>
-														<span className='text-xs font-bold text-red-300/80 uppercase tracking-wider'>
-															Risk #{i + 1}
-														</span>
-														<span className='px-2 py-1 bg-red-600/20 text-red-300 rounded text-xs font-semibold'>
-															High
-														</span>
-													</div>
-													<div className='text-red-100 text-sm'>
-														<SafeRender data={risk} />
-													</div>
-												</div>
-											</div>
-										))}
-									</div>
-								</div>
+      <div className='max-w-7xl mx-auto px-6 py-6'>
+        
+        {/* 2. TAB NAVIGATION */}
+        <div className='flex items-center justify-center mb-8'>
+          <div className='bg-slate-900 p-1.5 rounded-xl border border-slate-800 inline-flex shadow-lg shadow-black/20'>
+            {[
+              { id: 'upload', label: 'Upload Document', icon: Upload },
+              { id: 'results', label: 'Analysis Results', icon: FileCheck, disabled: !analysis },
+              { id: 'chat', label: 'AI Assistant', icon: MessageSquare, disabled: !analysis },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                disabled={tab.disabled}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/5'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 disabled:opacity-30 disabled:cursor-not-allowed'
+                }`}
+              >
+                <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-blue-400' : ''}`} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-								{/* Obligations */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-6'>
-									<div className='flex items-center gap-3 mb-4'>
-										<div className='p-2 bg-amber-600/20 rounded-lg'>
-											<Scale className='w-5 h-5 text-amber-400' />
-										</div>
-										<div>
-											<h3 className='text-xl font-bold text-white'>
-												Party Obligations
-											</h3>
-											<p className='text-sm text-slate-500'>
-												Binding requirements and duties
-											</p>
-										</div>
-									</div>
-									<div className='space-y-3'>
-										{enhancedAnalysis.obligations?.map((obs, i) => (
-											<div
-												key={i}
-												className='p-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors'
-											>
-												<SafeRender data={obs} />
-											</div>
-										))}
-									</div>
-								</div>
-							</div>
+        {/* --- VIEW: UPLOAD --- */}
+        {activeTab === 'upload' && (
+          <div className='max-w-3xl mx-auto'>
+            <div className='bg-slate-900 border border-slate-800 rounded-2xl p-10 shadow-2xl'>
+              <div className='text-center mb-10'>
+                <div className='inline-flex p-4 bg-slate-800 rounded-2xl mb-6 ring-8 ring-slate-800/50'>
+                  <FileText className='w-10 h-10 text-blue-500' />
+                </div>
+                <h2 className='text-3xl font-bold text-white mb-3'>Legal Document Analysis</h2>
+                <p className='text-slate-400 max-w-md mx-auto'>
+                  Upload contracts, agreements, or legal briefs. Our AI identifies risks, obligations, and key terms instantly.
+                </p>
+              </div>
 
-							{/* Sidebar */}
-							<div className='space-y-6'>
-								{/* Quick Actions */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-5'>
-									<h4 className='text-sm font-bold text-slate-300 mb-3'>
-										Quick Actions
-									</h4>
-									<div className='space-y-2'>
-										<button
-											onClick={exportAnalysis}
-											className='w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium'
-										>
-											<Download className='w-4 h-4' />
-											Export Report
-										</button>
-										<button
-											onClick={() => setActiveTab('chat')}
-											className='w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors font-medium'
-										>
-											<MessageSquare className='w-4 h-4' />
-											Ask AI Assistant
-										</button>
-									</div>
-								</div>
+              <div className='space-y-6'>
+                {/* Drag Drop Area */}
+                <div className='relative group'>
+                  <input
+                    ref={fileInputRef}
+                    type='file'
+                    accept='.txt,.pdf,.doc,.docx'
+                    onChange={handleFileUpload}
+                    className='absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10'
+                  />
+                  <div className={`h-40 border-2 border-dashed rounded-xl transition-all flex flex-col items-center justify-center gap-3 ${
+                    file 
+                    ? 'border-green-500/50 bg-green-500/5' 
+                    : 'border-slate-700 group-hover:border-blue-500 group-hover:bg-slate-800/50 bg-slate-800/20'
+                  }`}>
+                    {file ? (
+                      <>
+                        <CheckCircle className="w-8 h-8 text-green-500" />
+                        <span className="text-green-400 font-medium">{file.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                        <div className="text-center">
+                          <span className="text-slate-300 font-medium">Click to upload</span>
+                          <span className="text-slate-500"> or drag and drop</span>
+                        </div>
+                        <span className="text-xs text-slate-600">PDF, DOCX, TXT up to 10MB</span>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-								{/* Key Terms */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-5'>
-									<h4 className='text-sm font-bold text-slate-300 mb-3 flex items-center gap-2'>
-										<Sparkles className='w-4 h-4 text-blue-400' />
-										Key Terms
-									</h4>
-									<div className='flex flex-wrap gap-2'>
-										{enhancedAnalysis.keyTerms?.map((term, i) => (
-											<span
-												key={i}
-												className='px-2 py-1 bg-blue-600/20 border border-blue-600/30 text-blue-300 text-xs font-medium rounded hover:bg-blue-600/30 transition-colors cursor-pointer'
-											>
-												<SafeRender data={term} />
-											</span>
-										))}
-									</div>
-								</div>
+                <div className="flex items-center gap-4">
+                  <div className="h-px bg-slate-800 flex-1"></div>
+                  <span className="text-xs text-slate-500 font-medium uppercase">Or paste text</span>
+                  <div className="h-px bg-slate-800 flex-1"></div>
+                </div>
 
-								{/* Recommendations */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-5'>
-									<h4 className='text-sm font-bold text-slate-300 mb-3'>
-										Recommendations
-									</h4>
-									<div className='space-y-2'>
-										{enhancedAnalysis.recommendations?.map((rec, i) => (
-											<div
-												key={i}
-												className='flex items-start gap-2 p-2 bg-slate-800 rounded-lg'
-											>
-												<CheckCircle className='w-4 h-4 text-green-400 mt-0.5 flex-shrink-0' />
-												<span className='text-sm text-slate-300'>{rec}</span>
-											</div>
-										))}
-									</div>
-								</div>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder='Paste contract clauses here...'
+                  className='w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-sm text-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 font-mono h-48 resize-none'
+                />
 
-								{/* Document Metadata */}
-								<div className='bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-4'>
-									<h4 className='text-sm font-bold text-slate-300'>
-										Document Details
-									</h4>
+                {error && (
+                  <div className='p-4 bg-red-900/20 border border-red-900/50 rounded-xl flex items-center gap-3 text-red-200 text-sm'>
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    {error}
+                  </div>
+                )}
 
-									<div className='space-y-3'>
-										<div className='flex items-center gap-3'>
-											<Globe className='w-4 h-4 text-blue-400' />
-											<div>
-												<p className='text-xs text-slate-500'>Jurisdiction</p>
-												<p className='text-slate-200 text-sm font-medium'>
-													{enhancedAnalysis.jurisdiction || 'Not Specified'}
-												</p>
-											</div>
-										</div>
+                <button
+                  onClick={analyzeContract}
+                  disabled={loading || (!text && !file)}
+                  className='w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                  {loading ? 'Analyzing Document...' : 'Analyze Now'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-										<div className='flex items-center gap-3'>
-											<Calendar className='w-4 h-4 text-purple-400' />
-											<div>
-												<p className='text-xs text-slate-500'>Expiry Date</p>
-												<p className='text-slate-200 text-sm font-medium'>
-													{enhancedAnalysis.expiryDate || 'Not Specified'}
-												</p>
-											</div>
-										</div>
+        {/* --- VIEW: RESULTS --- */}
+        {activeTab === 'results' && enhancedAnalysis && (
+          <div className='space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500'>
+            
+            {/* KPI Dashboard */}
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+              <StatCard label="Critical Risks" value={enhancedAnalysis.risks?.length || 0} icon={ShieldAlert} color="red" />
+              <StatCard label="Obligations" value={enhancedAnalysis.obligations?.length || 0} icon={CheckCircle} color="amber" />
+              <StatCard label="Key Terms" value={enhancedAnalysis.keyTerms?.length || 0} icon={FileCheck} color="blue" />
+              <StatCard label="Compliance Score" value={`${(enhancedAnalysis.metadata.confidence * 100).toFixed(0)}%`} icon={TrendingUp} color="green" />
+            </div>
 
-										<div className='flex items-center gap-3'>
-											<Users className='w-4 h-4 text-green-400' />
-											<div>
-												<p className='text-xs text-slate-500'>Parties</p>
-												<p className='text-slate-200 text-sm font-medium'>
-													{enhancedAnalysis.parties?.length || 0} identified
-												</p>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
+            <div className='grid lg:grid-cols-3 gap-6'>
+              {/* Main Column */}
+              <div className='lg:col-span-2 space-y-6'>
+                {/* Executive Summary */}
+                <div className='bg-slate-900 border border-slate-800 rounded-xl p-6'>
+                  <div className='flex items-center gap-3 mb-4 border-b border-slate-800 pb-4'>
+                    <Brain className='w-5 h-5 text-blue-400' />
+                    <h3 className='font-bold text-white'>Executive Summary</h3>
+                  </div>
+                  <p className='text-slate-300 leading-relaxed text-sm'>
+                    {enhancedAnalysis.summary}
+                  </p>
+                </div>
 
-				{/* CHAT TAB */}
-				{activeTab === 'chat' && (
-					<div className='flex gap-6 h-[calc(100vh-160px)]'>
-						<div className='flex-1 min-w-0'>
-							<ChatInterface
-								chatHistory={chatHistory}
-								onSendMessage={handleChatSubmit}
-								loading={chatLoading}
-								documentText={text}
-								analysis={analysis}
-							/>
-						</div>
+                {/* Risks */}
+                <div className='space-y-4'>
+                  <h3 className='text-lg font-bold text-white flex items-center gap-2'>
+                    <ShieldAlert className="w-5 h-5 text-red-400" />
+                    Risk Assessment
+                  </h3>
+                  {enhancedAnalysis.risks?.map((risk, i) => (
+                    <div
+                      key={i}
+                      className='bg-slate-900 border border-red-900/30 rounded-xl p-5 hover:border-red-500/30 transition-colors group'
+                    >
+                      <div className='flex items-start gap-4'>
+                        <div className='mt-1 p-1.5 bg-red-500/10 rounded text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors'>
+                          <AlertCircle className='w-4 h-4' />
+                        </div>
+                        <div className='flex-1'>
+                          <div className='flex items-center justify-between mb-2'>
+                            <span className='text-red-300 font-semibold text-sm'>High Severity Risk</span>
+                            <span className='text-xs text-slate-500 font-mono'>Clause {i + 1}.0</span>
+                          </div>
+                          <div className='text-slate-300 text-sm'>
+                            <SafeRender data={risk} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-						{/* Document Context Panel */}
-						<div className='hidden lg:block w-80 bg-slate-900 border border-slate-700 rounded-xl p-4 overflow-hidden flex flex-col'>
-							<div className='flex items-center gap-2 mb-3 pb-3 border-b border-slate-700'>
-								<Eye className='w-4 h-4 text-blue-400' />
-								<h3 className='font-semibold text-white'>Document Context</h3>
-							</div>
-							<div className='flex-1 overflow-y-auto'>
-								<div className='text-xs text-slate-400 font-mono whitespace-pre-wrap leading-relaxed'>
-									{text ? (
-										<div className='space-y-2'>
-											<div className='p-2 bg-slate-800 rounded-lg'>
-												<strong>Document Preview:</strong>
-												<p className='mt-1 text-slate-300'>
-													{text.substring(0, 500)}...
-												</p>
-											</div>
-											<div className='p-2 bg-slate-800 rounded-lg'>
-												<strong>Analysis Context:</strong>
-												<p className='mt-1 text-slate-300'>
-													{enhancedAnalysis?.summary?.substring(0, 200)}...
-												</p>
-											</div>
-										</div>
-									) : (
-										<p className='text-slate-500 italic'>No document loaded</p>
-									)}
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
-			</div>
-		</div>
-	);
+              {/* Sidebar Column */}
+              <div className='space-y-6'>
+                <div className='bg-slate-900 border border-slate-800 rounded-xl p-5 sticky top-24'>
+                  <h4 className='text-sm font-bold text-slate-400 uppercase tracking-wider mb-4'>Document Details</h4>
+                  
+                  <div className='space-y-4 text-sm'>
+                    <div className='flex justify-between items-center py-2 border-b border-slate-800'>
+                      <span className='text-slate-500'>Type</span>
+                      <span className='text-white font-medium'>{enhancedAnalysis.documentType || 'Contract'}</span>
+                    </div>
+                    <div className='flex justify-between items-center py-2 border-b border-slate-800'>
+                      <span className='text-slate-500'>Jurisdiction</span>
+                      <span className='text-white font-medium'>{enhancedAnalysis.jurisdiction || 'N/A'}</span>
+                    </div>
+                    <div className='flex justify-between items-center py-2 border-b border-slate-800'>
+                      <span className='text-slate-500'>Parties</span>
+                      <span className='text-white font-medium'>{enhancedAnalysis.parties?.length || 0} Detected</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-slate-800">
+                     <h4 className='text-sm font-bold text-slate-400 uppercase tracking-wider mb-3'>Key Terms</h4>
+                     <div className="flex flex-wrap gap-2">
+                        {enhancedAnalysis.keyTerms?.slice(0, 6).map((term, i) => (
+                          <span key={i} className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-blue-300">
+                             <SafeRender data={term} />
+                          </span>
+                        ))}
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- VIEW: CHAT INTERFACE --- */}
+        {activeTab === 'chat' && (
+          <div className='flex flex-col lg:flex-row gap-6 h-[calc(100vh-180px)]'>
+            {/* Left: Chat Bot */}
+            <div className='flex-1 min-w-0'>
+              <ChatInterface
+                chatHistory={chatHistory}
+                onSendMessage={handleChatSubmit}
+                loading={chatLoading}
+                documentText={text}
+                onRegenerate={onRegenerate}
+              />
+            </div>
+
+            {/* Right: Document Context Panel */}
+            <div className='hidden lg:flex w-[400px] flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl'>
+              <div className='p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <BookOpen className='w-4 h-4 text-slate-400' />
+                  <span className='text-sm font-bold text-slate-200'>Document Reference</span>
+                </div>
+                <div className='flex gap-1'>
+                  <button className='p-1.5 hover:bg-slate-700 rounded text-slate-400'>
+                    <Search className='w-4 h-4' />
+                  </button>
+                  <button className='p-1.5 hover:bg-slate-700 rounded text-slate-400'>
+                    <Bookmark className='w-4 h-4' />
+                  </button>
+                </div>
+              </div>
+              
+              <div className='flex-1 overflow-y-auto p-6 bg-slate-900 custom-scrollbar'>
+                {text ? (
+                  <div className='prose prose-invert prose-sm max-w-none'>
+                    {/* Simulating a paper document look within the dark mode */}
+                    <div className="font-serif text-slate-300 whitespace-pre-wrap leading-7 text-justify opacity-90">
+                      {text}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                    <FileText className="w-12 h-12 mb-2 opacity-20" />
+                    <p className="text-sm">No document content available</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className='p-2 bg-slate-800 border-t border-slate-700 text-[10px] text-slate-500 text-center flex justify-between px-4'>
+                <span>Ln 1, Col 1</span>
+                <span>UTF-8</span>
+                <span>{text?.length || 0} chars</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default LegalAnalyzerView;

@@ -116,6 +116,7 @@ IMPORTANT INSTRUCTIONS:
 - Break down complex legal terms into simple explanations
 - When listing items, use bullet points or numbered lists
 - Highlight key terms and important phrases in **bold**
+- Include citation markers like [cite:123-145] when referencing specific parts of the document
 
 ${analysis ? `ANALYZED DOCUMENT SUMMARY:
 - Document Type: ${analysis.documentType || 'Not specified'}
@@ -158,6 +159,48 @@ Answer the user's question about this contract:`;
     }
   };
 
+const onRegenerate = async (messageIndex) => {
+  // 1. Safety Check: Ensure chatHistory exists and index is valid
+  if (!chatHistory || messageIndex < 0 || messageIndex >= chatHistory.length) {
+    console.warn("Regenerate failed: Invalid index or empty history");
+    return;
+  }
+
+  // 2. Identify the User Message (The one before the AI response)
+  const userMessageIndex = messageIndex - 1;
+
+  // 3. CRITICAL FIX: Check if the message object exists BEFORE reading .role
+  const previousMessage = chatHistory[userMessageIndex];
+
+  if (!previousMessage || previousMessage.role !== 'user') {
+    console.warn("Regenerate failed: Previous message was not a user prompt");
+    return;
+  }
+
+  const userMessage = previousMessage.content;
+
+  // 4. Update History: Remove the AI response we are regenerating
+  const newHistory = [...chatHistory];
+  newHistory.splice(messageIndex, 1);
+  
+  // Update state immediately so the old message disappears
+  setChatHistory(newHistory); 
+
+  // 5. Trigger the API call with the user's original text
+  // Pass true or a flag if your handleChatSubmit needs to know it's a retry
+  await handleChatSubmit(userMessage);
+};
+  const onCitationClick = (start, end) => {
+    // This function would scroll to the relevant part of the document
+    console.log(`Citation clicked: ${start}-${end}`);
+    // In a real implementation, this would highlight the text in the document
+  };
+
+  const onHighlightCitation = (start, end) => {
+    // This function would highlight text in the document
+    console.log(`Highlighting: ${start}-${end}`);
+  };
+
   const exportAnalysis = () => {
     if (!analysis) return;
     const blob = new Blob([JSON.stringify(analysis, null, 2)], { type: 'application/json' });
@@ -196,6 +239,9 @@ Answer the user's question about this contract:`;
       chatHistory={chatHistory}
       handleChatSubmit={handleChatSubmit}
       chatLoading={chatLoading}
+      onRegenerate={onRegenerate}
+      onCitationClick={onCitationClick}
+      onHighlightCitation={onHighlightCitation}
     />
   );
 };
