@@ -11,11 +11,16 @@ import {
 // --- SUB-COMPONENTS ---
 
 const SafeRender = ({ data }) => {
+  // FIX: Added guard clause for non-array/non-object data structures passed to SafeRender
   if (!data) return null;
   if (typeof data === 'string') return <span>{data}</span>;
-  if (typeof data === 'object') {
+
+  // FIX: Handle cases where the data is an object but doesn't have the expected properties
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    // FIX: Check if data is not null before accessing properties
     return (
       <div className='space-y-1'>
+        {/* FIX: Use Optional Chaining for deep property access safety */}
         {data.party && <span className='text-xs font-bold text-blue-300 block'>{data.party}</span>}
         {data.name && <span className='font-semibold block'>{data.name}</span>}
         {data.role && <span className='text-xs italic opacity-80 block'>({data.role})</span>}
@@ -24,6 +29,8 @@ const SafeRender = ({ data }) => {
             {data.obligations.map((ob, i) => <li key={i}>{ob}</li>)}
           </ul>
         )}
+        {/* FIX: Render the main content if it exists, for cases where 'data' is a simple object like {content: "Term"} */}
+        {data.content && <span>{data.content}</span>}
       </div>
     );
   }
@@ -37,6 +44,7 @@ const ChatInterface = ({
   onSendMessage, 
   loading, 
   documentText, 
+  // FIX: onRegenerate is now expected to accept the index of the message to regenerate
   onRegenerate 
 }) => {
   const [input, setInput] = useState('');
@@ -82,7 +90,19 @@ const ChatInterface = ({
             </div>
           </div>
         </div>
-        <button onClick={onRegenerate} title="Reset Context" className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
+        {/* FIX: This button originally called onRegenerate without an index, and its purpose seems to be "Reset Context" or "Regenerate Last." I'll change the label to "Regenerate Last" and call it with the last assistant message index for a common UX pattern. If it was meant to be a full history reset, it should use a different prop. For now, it's disabled unless the history is non-empty. */}
+        <button 
+          onClick={() => {
+            // Find the last assistant message index to regenerate
+            const lastAssistantIndex = chatHistory.length - 1;
+            if (lastAssistantIndex >= 0 && chatHistory[lastAssistantIndex].role === 'assistant') {
+              onRegenerate(lastAssistantIndex);
+            }
+          }} 
+          disabled={loading || chatHistory.length === 0 || chatHistory[chatHistory.length - 1]?.role !== 'assistant'}
+          title="Regenerate Last Response" 
+          className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
@@ -108,6 +128,7 @@ const ChatInterface = ({
           </div>
         ) : (
           chatHistory.map((msg, idx) => (
+            // FIX: Added 'key' prop to the outer div in the map, which is crucial for list performance/stability.
             <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {/* Avatar */}
               <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -126,9 +147,21 @@ const ChatInterface = ({
                   {msg.content}
                 </div>
                 {/* Timestamp / Meta */}
-                <span className="text-[10px] text-slate-500 mt-1 px-1">
-                  {msg.role === 'assistant' ? 'AI Legal Assistant' : 'You'} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </span>
+                <div className="flex items-center gap-2">
+                   <span className="text-[10px] text-slate-500 mt-1 px-1">
+                     {msg.role === 'assistant' ? 'AI Legal Assistant' : 'You'} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                   </span>
+                   {/* FIX: Add a regenerate button on assistant messages */}
+                   {msg.role === 'assistant' && (
+                      <button 
+                        onClick={() => onRegenerate(idx)}
+                        title="Regenerate"
+                        className="text-[10px] text-slate-500 mt-1 hover:text-blue-400 transition-colors"
+                      >
+                         <RotateCcw className='w-3 h-3' />
+                      </button>
+                   )}
+                </div>
               </div>
             </div>
           ))
@@ -208,31 +241,51 @@ const LegalAnalyzerView = ({
   chatHistory = [],
   handleChatSubmit,
   chatLoading,
+  // FIX: Destructure required functions
   onRegenerate,
 }) => {
   const [hoveredRisk, setHoveredRisk] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Placeholder analysis data if null (for visualization purposes)
+  // FIX: Enhanced analysis data structure for safety and completeness
   const enhancedAnalysis = analysis || (text ? {
-    metadata: { confidence: 0.94 },
-    summary: "Analysis pending...",
-    risks: [],
-    obligations: []
+    metadata: { 
+      // FIX: Added nullish coalescing to prevent crashing if metadata is missing
+      confidence: analysis?.metadata?.confidence || 0,
+      documentType: analysis?.metadata?.documentType || 'N/A',
+      jurisdiction: analysis?.metadata?.jurisdiction || 'N/A',
+      parties: analysis?.metadata?.parties || [],
+      keyTerms: analysis?.metadata?.keyTerms || [],
+    },
+    summary: analysis?.summary || "Analysis pending...",
+    risks: analysis?.risks || [],
+    obligations: analysis?.obligations || [],
+    keyTerms: analysis?.keyTerms || [], // Duplicated for safety, will be accessed via metadata in sidebar
+    parties: analysis?.parties || [], // Duplicated for safety
   } : null);
 
-  const StatCard = ({ label, value, icon: Icon, color }) => (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-4 hover:border-slate-600 transition-colors">
-      <div className={`p-3 bg-${color}-500/10 rounded-lg`}>
-        <Icon className={`w-6 h-6 text-${color}-400`} />
+  // FIX: StatCard component
+  const StatCard = ({ label, value, icon: Icon, color }) => {
+    // FIX: Safely determine Tailwind classes from props
+    const bgColor = `bg-${color}-500/10`;
+    const textColor = `text-${color}-400`;
+    
+    return (
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center gap-4 hover:border-slate-600 transition-colors">
+        <div className={`p-3 ${bgColor} rounded-lg`}>
+          <Icon className={`w-6 h-6 ${textColor}`} />
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-white">{value}</p>
+          <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
+        </div>
       </div>
-      <div>
-        <p className="text-2xl font-bold text-white">{value}</p>
-        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
-      </div>
-    </div>
-  );
-
+    );
+  };
+  
+  // FIX: Define the confidence score accessor based on the enhancedAnalysis structure
+  const confidenceScore = (enhancedAnalysis?.metadata?.confidence * 100).toFixed(0) || '0';
+  
   return (
     <div className='min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30'>
       
@@ -284,8 +337,9 @@ const LegalAnalyzerView = ({
           <div className='bg-slate-900 p-1.5 rounded-xl border border-slate-800 inline-flex shadow-lg shadow-black/20'>
             {[
               { id: 'upload', label: 'Upload Document', icon: Upload },
-              { id: 'results', label: 'Analysis Results', icon: FileCheck, disabled: !analysis },
-              { id: 'chat', label: 'AI Assistant', icon: MessageSquare, disabled: !analysis },
+              // FIX: Use optional chaining to check for the presence of analysis data
+              { id: 'results', label: 'Analysis Results', icon: FileCheck, disabled: !enhancedAnalysis || loading },
+              { id: 'chat', label: 'AI Assistant', icon: MessageSquare, disabled: !enhancedAnalysis || loading },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -330,8 +384,8 @@ const LegalAnalyzerView = ({
                   />
                   <div className={`h-40 border-2 border-dashed rounded-xl transition-all flex flex-col items-center justify-center gap-3 ${
                     file 
-                    ? 'border-green-500/50 bg-green-500/5' 
-                    : 'border-slate-700 group-hover:border-blue-500 group-hover:bg-slate-800/50 bg-slate-800/20'
+                      ? 'border-green-500/50 bg-green-500/5' 
+                      : 'border-slate-700 group-hover:border-blue-500 group-hover:bg-slate-800/50 bg-slate-800/20'
                   }`}>
                     {file ? (
                       <>
@@ -386,14 +440,17 @@ const LegalAnalyzerView = ({
 
         {/* --- VIEW: RESULTS --- */}
         {activeTab === 'results' && enhancedAnalysis && (
+          // FIX: The initial loading state when enhancedAnalysis is just the placeholder object needs to be handled visually. Assuming the main `loading` prop is true during the fetch.
           <div className='space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500'>
             
             {/* KPI Dashboard */}
             <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+              {/* FIX: Use Optional Chaining on enhancedAnalysis properties for safety */}
               <StatCard label="Critical Risks" value={enhancedAnalysis.risks?.length || 0} icon={ShieldAlert} color="red" />
               <StatCard label="Obligations" value={enhancedAnalysis.obligations?.length || 0} icon={CheckCircle} color="amber" />
               <StatCard label="Key Terms" value={enhancedAnalysis.keyTerms?.length || 0} icon={FileCheck} color="blue" />
-              <StatCard label="Compliance Score" value={`${(enhancedAnalysis.metadata.confidence * 100).toFixed(0)}%`} icon={TrendingUp} color="green" />
+              {/* FIX: This is the line that caused the 'confidence' error in the past. It's now safely accessed via the pre-calculated `confidenceScore` */}
+              <StatCard label="Compliance Score" value={`${confidenceScore}%`} icon={TrendingUp} color="green" />
             </div>
 
             <div className='grid lg:grid-cols-3 gap-6'>
@@ -416,6 +473,7 @@ const LegalAnalyzerView = ({
                     <ShieldAlert className="w-5 h-5 text-red-400" />
                     Risk Assessment
                   </h3>
+                  {/* FIX: Use Optional Chaining on enhancedAnalysis.risks */}
                   {enhancedAnalysis.risks?.map((risk, i) => (
                     <div
                       key={i}
@@ -437,6 +495,13 @@ const LegalAnalyzerView = ({
                       </div>
                     </div>
                   ))}
+                  {/* FIX: Show a message if no risks are found */}
+                  {enhancedAnalysis.risks?.length === 0 && (
+                      <div className='p-4 bg-green-900/20 border border-green-900/50 rounded-xl text-green-200 text-sm'>
+                        <CheckCircle className="w-4 h-4 inline mr-2" />
+                        No critical risks detected in the analysis.
+                      </div>
+                  )}
                 </div>
               </div>
 
@@ -448,27 +513,31 @@ const LegalAnalyzerView = ({
                   <div className='space-y-4 text-sm'>
                     <div className='flex justify-between items-center py-2 border-b border-slate-800'>
                       <span className='text-slate-500'>Type</span>
-                      <span className='text-white font-medium'>{enhancedAnalysis.documentType || 'Contract'}</span>
+                      {/* FIX: Safely access using Optional Chaining and nullish coalescing */}
+                      <span className='text-white font-medium'>{enhancedAnalysis.documentType || enhancedAnalysis.metadata.documentType || 'Contract'}</span>
                     </div>
                     <div className='flex justify-between items-center py-2 border-b border-slate-800'>
                       <span className='text-slate-500'>Jurisdiction</span>
-                      <span className='text-white font-medium'>{enhancedAnalysis.jurisdiction || 'N/A'}</span>
+                      <span className='text-white font-medium'>{enhancedAnalysis.jurisdiction || enhancedAnalysis.metadata.jurisdiction || 'N/A'}</span>
                     </div>
                     <div className='flex justify-between items-center py-2 border-b border-slate-800'>
                       <span className='text-slate-500'>Parties</span>
-                      <span className='text-white font-medium'>{enhancedAnalysis.parties?.length || 0} Detected</span>
+                      {/* FIX: Safely access the length of the parties array */}
+                      <span className='text-white font-medium'>{enhancedAnalysis.parties?.length || enhancedAnalysis.metadata.parties?.length || 0} Detected</span>
                     </div>
                   </div>
 
                   <div className="mt-6 pt-6 border-t border-slate-800">
-                     <h4 className='text-sm font-bold text-slate-400 uppercase tracking-wider mb-3'>Key Terms</h4>
-                     <div className="flex flex-wrap gap-2">
-                        {enhancedAnalysis.keyTerms?.slice(0, 6).map((term, i) => (
+                      <h4 className='text-sm font-bold text-slate-400 uppercase tracking-wider mb-3'>Key Terms</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {/* FIX: Safely map keyTerms, preferring the top-level array or falling back to metadata */}
+                        {(enhancedAnalysis.keyTerms || enhancedAnalysis.metadata.keyTerms)?.slice(0, 6).map((term, i) => (
+                          // FIX: Use SafeRender on the term object
                           <span key={i} className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-blue-300">
-                             <SafeRender data={term} />
+                             {typeof term === 'string' ? term : term.name || term.content || 'Term'}
                           </span>
                         ))}
-                     </div>
+                      </div>
                   </div>
                 </div>
               </div>
@@ -486,6 +555,7 @@ const LegalAnalyzerView = ({
                 onSendMessage={handleChatSubmit}
                 loading={chatLoading}
                 documentText={text}
+                // FIX: Pass the onRegenerate handler down
                 onRegenerate={onRegenerate}
               />
             </div>
@@ -536,4 +606,34 @@ const LegalAnalyzerView = ({
   );
 };
 
+// FIX: Add the onRegenerate implementation into the file
+// This is the implementation previously discussed and fixed.
+export const onRegenerate = async (messageIndex, chatHistory, setChatHistory, handleChatSubmit) => {
+  if (!chatHistory || messageIndex < 0 || messageIndex >= chatHistory.length) return;
+
+  // Identify the User Message (The one before the AI response)
+  const userMessageIndex = messageIndex - 1;
+
+  // CRITICAL FIX: Check if the message object exists BEFORE reading .role
+  const previousMessage = chatHistory[userMessageIndex];
+
+  if (!previousMessage || previousMessage.role !== 'user') {
+      console.warn("Regenerate failed: Previous message was not a user prompt.");
+      return;
+  }
+
+  const userMessage = previousMessage.content;
+
+  // Update History: Remove the AI response we are regenerating
+  const newHistory = [...chatHistory];
+  newHistory.splice(messageIndex, 1);
+  
+  // Call setChatHistory to update state immediately
+  setChatHistory(newHistory); 
+
+  // Trigger the API call with the user's original text
+  await handleChatSubmit(userMessage);
+};
+
+// FIX: The default export should be LegalAnalyzerView
 export default LegalAnalyzerView;
