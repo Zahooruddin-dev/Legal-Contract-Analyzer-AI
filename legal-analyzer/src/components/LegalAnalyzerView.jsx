@@ -644,13 +644,13 @@ const LegalAnalyzerView = ({
 				{activeTab === 'chat' && (
 					<div className='flex gap-6 h-[calc(100vh-160px)]'>
 						<div className='flex-1 min-w-0'>
-				<ChatInterface 
-  chatHistory={chatHistory}
-  onSendMessage={handleChatSubmit}
-  loading={chatLoading}
-  documentText={text}
-  analysis={analysis}
-/>
+							<ChatInterface
+								chatHistory={chatHistory}
+								onSendMessage={handleChatSubmit}
+								loading={chatLoading}
+								documentText={text}
+								analysis={analysis}
+							/>
 						</div>
 
 						{/* Document Context Panel */}
