@@ -26,7 +26,7 @@ const LegalAnalyzer = () => {
 
     setError('');
     setFile(uploadedFile);
-    setLoading(true); // Show loading while parsing PDF
+    setLoading(true);
 
     try {
       if (uploadedFile.type === 'application/pdf') {
@@ -89,6 +89,14 @@ const LegalAnalyzer = () => {
   };
 
   const handleChatSubmit = async (userMessage) => {
+    if (!text) {
+      setChatHistory(prev => [...prev, 
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: "Please upload a legal document first before asking questions." }
+      ]);
+      return;
+    }
+
     setChatLoading(true);
     
     // Optimistically add user message
@@ -96,28 +104,55 @@ const LegalAnalyzer = () => {
     setChatHistory(newHistory);
 
     try {
+      // Enhanced system prompt with context
+      const systemPrompt = `You are an expert legal assistant specializing in contract analysis. Your role is to help users understand their legal documents by answering questions clearly and professionally.
+
+IMPORTANT INSTRUCTIONS:
+- Answer based SPECIFICALLY on the contract text provided below
+- Use markdown formatting for better readability (bold, lists, headings)
+- Be precise and cite specific clauses when relevant
+- If information isn't in the contract, clearly state that
+- Use professional but accessible language
+- Break down complex legal terms into simple explanations
+- When listing items, use bullet points or numbered lists
+- Highlight key terms and important phrases in **bold**
+
+${analysis ? `ANALYZED DOCUMENT SUMMARY:
+- Document Type: ${analysis.documentType || 'Not specified'}
+- Parties: ${analysis.parties?.join(', ') || 'Not identified'}
+- Key Terms: ${analysis.keyTerms?.map(t => `${t.term}: ${t.definition}`).join('; ') || 'None'}
+- Jurisdiction: ${analysis.jurisdiction || 'Not specified'}
+
+` : ''}CONTRACT TEXT:
+${text.substring(0, 8000)}${text.length > 8000 ? '...(truncated)' : ''}
+
+Answer the user's question about this contract:`;
+
       const response = await fetch(WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          max_tokens: 1000,
-          temperature: 0.5,
+          max_tokens: 1500,
+          temperature: 0.3,
           messages: [
-            {
-              role: 'system',
-              content: `You are a helpful legal assistant. Answer questions based specifically on the following contract text. Be concise and precise.\n\nCONTRACT CONTEXT:\n${text}`
-            },
+            { role: 'system', content: systemPrompt },
             ...newHistory.map(msg => ({ role: msg.role, content: msg.content }))
           ]
         })
       });
+
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const data = await response.json();
       const botReply = data.choices?.[0]?.message?.content || "I couldn't process that request.";
 
       setChatHistory(prev => [...prev, { role: 'assistant', content: botReply }]);
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error connecting to the AI." }]);
+      console.error('Chat error:', err);
+      setChatHistory(prev => [...prev, { 
+        role: 'assistant', 
+        content: "Sorry, I encountered an error connecting to the AI. Please try again." 
+      }]);
     } finally {
       setChatLoading(false);
     }

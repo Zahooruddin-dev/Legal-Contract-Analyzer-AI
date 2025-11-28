@@ -1,16 +1,25 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Send, User, Bot, Loader2, Sparkles, Copy, ThumbsUp, ThumbsDown, Brain, AlertTriangle, Scale } from 'lucide-react';
+import { Send, User, Bot, Loader2, Sparkles, Copy, ThumbsUp, ThumbsDown, Brain, AlertTriangle, Scale, FileText } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
-const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
+const ChatInterface = ({ chatHistory, onSendMessage, loading, documentText, analysis }) => {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
+  const [contextInfo, setContextInfo] = useState({ hasDoc: false, hasAnalysis: false });
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory]);
+
+  useEffect(() => {
+    setContextInfo({
+      hasDoc: !!documentText && documentText.length > 0,
+      hasAnalysis: !!analysis
+    });
+  }, [documentText, analysis]);
 
   const handleSubmit = () => {
     const msg = inputRef.current.value.trim();
@@ -39,7 +48,9 @@ const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
     "What are the payment terms?",
     "What happens in case of breach?",
     "Explain the liability limitations",
-    "Are there any confidentiality clauses?"
+    "Are there any confidentiality clauses?",
+    "What's the dispute resolution process?",
+    "Summarize the indemnification clause"
   ];
 
   const quickActions = [
@@ -77,45 +88,66 @@ const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
               <Brain className="w-12 h-12 text-blue-400" />
             </div>
             <div className="space-y-2">
-              <h4 className="text-lg font-semibold text-white">Document Analysis Ready</h4>
-              <p className="text-slate-400 text-sm">Ask questions about clauses, obligations, or risks</p>
-            </div>
-            
-            {/* Quick Action Buttons */}
-            <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
-              {quickActions.map((action, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    inputRef.current.value = action.prompt;
-                    inputRef.current.focus();
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors group"
-                >
-                  <action.icon className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-slate-300 group-hover:text-white">{action.label}</span>
-                </button>
-              ))}
+              <h4 className="text-lg font-semibold text-white">
+                {contextInfo.hasDoc ? 'Document Loaded - Ready to Chat' : 'Upload a Document First'}
+              </h4>
+              <p className="text-slate-400 text-sm">
+                {contextInfo.hasDoc 
+                  ? 'Ask questions about clauses, obligations, or risks in your document'
+                  : 'Please upload a legal document to start chatting with the AI assistant'
+                }
+              </p>
             </div>
 
-            {/* Suggested Questions */}
-            <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
-              {suggestedQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    inputRef.current.value = q;
-                    inputRef.current.focus();
-                  }}
-                  className="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-4 h-4 text-blue-400 opacity-60 group-hover:opacity-100" />
-                    <span className="text-sm text-slate-300 group-hover:text-white">{q}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {/* Context Indicator */}
+            {contextInfo.hasDoc && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600/10 border border-green-600/30 rounded-lg max-w-md mx-auto">
+                <FileText className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-300">
+                  Document context active • {contextInfo.hasAnalysis ? 'Analysis complete' : 'Ready for questions'}
+                </span>
+              </div>
+            )}
+            
+            {contextInfo.hasDoc && (
+              <>
+                {/* Quick Action Buttons */}
+                <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+                  {quickActions.map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        inputRef.current.value = action.prompt;
+                        inputRef.current.focus();
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors group"
+                    >
+                      <action.icon className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm text-slate-300 group-hover:text-white">{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Suggested Questions */}
+                <div className="grid grid-cols-1 gap-2 max-w-md mx-auto">
+                  {suggestedQuestions.slice(0, 6).map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        inputRef.current.value = q;
+                        inputRef.current.focus();
+                      }}
+                      className="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-4 h-4 text-blue-400 opacity-60 group-hover:opacity-100" />
+                        <span className="text-sm text-slate-300 group-hover:text-white">{q}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
         
@@ -142,9 +174,37 @@ const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
                   ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
                   : 'bg-slate-800 border border-slate-600 text-slate-100 rounded-2xl rounded-tl-sm'
               } p-4`}>
-                <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {msg.content}
-                </div>
+                {msg.role === 'user' ? (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                        ul: ({node, ...props}) => <ul className="mb-2 ml-4 list-disc" {...props} />,
+                        ol: ({node, ...props}) => <ol className="mb-2 ml-4 list-decimal" {...props} />,
+                        li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                        strong: ({node, ...props}) => <strong className="font-semibold text-blue-300" {...props} />,
+                        em: ({node, ...props}) => <em className="italic text-slate-300" {...props} />,
+                        code: ({node, inline, ...props}) => 
+                          inline ? (
+                            <code className="px-1.5 py-0.5 bg-slate-700 rounded text-blue-300 text-xs" {...props} />
+                          ) : (
+                            <code className="block p-2 bg-slate-700 rounded text-xs overflow-x-auto" {...props} />
+                          ),
+                        blockquote: ({node, ...props}) => (
+                          <blockquote className="border-l-4 border-blue-500 pl-4 italic text-slate-300" {...props} />
+                        ),
+                        h3: ({node, ...props}) => <h3 className="text-base font-semibold text-blue-300 mt-3 mb-2" {...props} />,
+                        h4: ({node, ...props}) => <h4 className="text-sm font-semibold text-blue-300 mt-2 mb-1" {...props} />
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
                 
                 {/* Action Buttons for Assistant Messages */}
                 {msg.role === 'assistant' && (
@@ -190,19 +250,27 @@ const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
 
       {/* Enhanced Input Area */}
       <div className="p-4 bg-slate-800 border-t border-slate-700">
+        {!contextInfo.hasDoc && (
+          <div className="mb-3 p-2 bg-yellow-600/10 border border-yellow-600/30 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-400" />
+            <span className="text-xs text-yellow-300">Upload a document first to enable chat</span>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">
             <textarea
               ref={inputRef}
               rows="1"
-              placeholder="Ask about clauses, obligations, risks, or any specific terms..."
-              disabled={loading}
+              placeholder={contextInfo.hasDoc 
+                ? "Ask about clauses, obligations, risks, or any specific terms..." 
+                : "Upload a document to start chatting..."}
+              disabled={loading || !contextInfo.hasDoc}
               onInput={(e) => {
                 e.target.style.height = 'auto';
                 e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
               }}
               onKeyDown={handleKeyDown}
-              className="w-full bg-slate-700 border border-slate-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:text-slate-500 resize-none disabled:opacity-50"
+              className="w-full bg-slate-700 border border-slate-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:text-slate-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ minHeight: '48px', maxHeight: '120px' }}
             />
             <div className="absolute bottom-1 right-2 text-xs text-slate-500">
@@ -211,7 +279,7 @@ const ChatInterface = ({ chatHistory, onSendMessage, loading }) => {
           </div>
           <button 
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !contextInfo.hasDoc}
             className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-5 h-5" />
