@@ -16,6 +16,33 @@ const SuggestedQuery = ({ text, onClick }) => (
 const MessageBubble = ({ message, onRegenerate, index }) => {
   const isUser = message.role === 'user';
   
+  const formatContent = (text) => {
+    if (!text) return text;
+    
+    let formatted = text;
+    
+    // Convert **bold** to <strong>
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert *italic* to <em>
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Convert `code` to <code>
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-slate-700 px-1.5 py-0.5 rounded text-xs">$1</code>');
+    
+    // Convert numbered lists
+    formatted = formatted.replace(/^\d+\.\s(.+)$/gm, '<li class="ml-4">$1</li>');
+    formatted = formatted.replace(/(<li class="ml-4">.*<\/li>)/s, '<ol class="list-decimal ml-4 space-y-1">$1</ol>');
+    
+    // Convert bullet lists
+    formatted = formatted.replace(/^[-•]\s(.+)$/gm, '<li class="ml-4">$1</li>');
+    
+    // Convert line breaks
+    formatted = formatted.replace(/\n/g, '<br />');
+    
+    return formatted;
+  };
+  
   return (
     <div className={`flex gap-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
@@ -27,13 +54,14 @@ const MessageBubble = ({ message, onRegenerate, index }) => {
 
       {/* Bubble */}
       <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-          isUser 
-            ? 'bg-blue-600 text-white rounded-tr-none' 
-            : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'
-        }`}>
-          {message.content}
-        </div>
+        <div 
+          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+            isUser 
+              ? 'bg-blue-600 text-white rounded-tr-none' 
+              : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'
+          }`}
+          dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
+        />
         
         {/* Timestamp / Meta */}
         <div className="flex items-center gap-2">
