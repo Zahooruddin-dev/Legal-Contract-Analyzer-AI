@@ -37,9 +37,9 @@ interface onSuggestedQueryType {
 }
 interface ChatInterface {
 	chatHistory: string[];
-	onSendMessage: () => void;
+	onSendMessage: (message: string) => void;
 	loading: boolean;
-	onRegenerate: () => void;
+	onRegenerate: (index: number) => void;
 }
 
 // Usage in component:
