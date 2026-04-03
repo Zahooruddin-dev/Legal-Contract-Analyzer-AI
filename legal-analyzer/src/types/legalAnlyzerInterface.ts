@@ -76,7 +76,7 @@ export interface LegalAnalyzerViewProps {
     error: string;
     activeTab: TabId;
     setActiveTab: (tab: TabId) => void;
-    fileInputRef: React.RefObject<HTMLInputElement>;
+fileInputRef: React.RefObject<HTMLInputElement | null>;
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
     analyzeContract: () => Promise<void>;
     resetAnalysis: () => void;
@@ -95,7 +95,7 @@ export interface UploadViewProps {
     setText: (text: string) => void;
     error: string;
     loading: boolean;
-    fileInputRef: React.RefObject<HTMLInputElement>;
+fileInputRef: React.RefObject<HTMLInputElement | null>;
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
     analyzeContract: () => Promise<void>;
 }
