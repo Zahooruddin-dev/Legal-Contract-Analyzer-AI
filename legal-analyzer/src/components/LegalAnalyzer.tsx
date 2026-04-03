@@ -1,7 +1,10 @@
 import React, { useState, useRef } from 'react';
 import LegalAnalyzerView from './LegalAnalyzerView.js';
 import { extractTextFromPDF } from '../utils/pdfUtils.js';
-
+import {
+	FileUploaderProps,
+	userMessageInterface,
+} from '../types/legalAnlyzerInterface.js';
 const LegalAnalyzer = () => {
 	// State
 	const [file, setFile] = useState(null);
@@ -20,7 +23,7 @@ const LegalAnalyzer = () => {
 	// Use Environment Variable
 	const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL;
 
-	const handleFileUpload = async (e) => {
+	const handleFileUpload = async (e): onCitationClick => {
 		const uploadedFile = e.target.files[0];
 		if (!uploadedFile) return;
 
@@ -88,7 +91,7 @@ const LegalAnalyzer = () => {
 		}
 	};
 
-	const handleChatSubmit = async (userMessage) => {
+	const handleChatSubmit = async (userMessage): userMessageInterface => {
 		if (!text) {
 			setChatHistory((prev) => [
 				...prev,
@@ -181,7 +184,6 @@ Answer the user's question about this contract:`;
 	};
 
 	const onRegenerate = async (messageIndex) => {
-		// 1. Safety Check: Ensure chatHistory exists and index is valid
 		if (
 			!chatHistory ||
 			messageIndex < 0 ||
@@ -190,39 +192,23 @@ Answer the user's question about this contract:`;
 			console.warn('Regenerate failed: Invalid index or empty history');
 			return;
 		}
-
-		// 2. Identify the User Message (The one before the AI response)
 		const userMessageIndex = messageIndex - 1;
-
-		// 3. CRITICAL FIX: Check if the message object exists BEFORE reading .role
 		const previousMessage = chatHistory[userMessageIndex];
-
 		if (!previousMessage || previousMessage.role !== 'user') {
 			console.warn('Regenerate failed: Previous message was not a user prompt');
 			return;
 		}
-
 		const userMessage = previousMessage.content;
-
-		// 4. Update History: Remove the AI response we are regenerating
 		const newHistory = [...chatHistory];
 		newHistory.splice(messageIndex, 1);
-
-		// Update state immediately so the old message disappears
 		setChatHistory(newHistory);
-
-		// 5. Trigger the API call with the user's original text
-		// Pass true or a flag if your handleChatSubmit needs to know it's a retry
 		await handleChatSubmit(userMessage);
 	};
-	const onCitationClick = (start, end) => {
-		// This function would scroll to the relevant part of the document
+	const onCitationClick = (start, end): onCitationClick => {
 		console.log(`Citation clicked: ${start}-${end}`);
-		// In a real implementation, this would highlight the text in the document
 	};
 
 	const onHighlightCitation = (start, end) => {
-		// This function would highlight text in the document
 		console.log(`Highlighting: ${start}-${end}`);
 	};
 
