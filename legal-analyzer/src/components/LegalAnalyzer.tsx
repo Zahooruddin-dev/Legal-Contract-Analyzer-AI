@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import LegalAnalyzerView from './LegalAnalyzerView';
-import { extractTextFromPDF } from '../utils/pdfUtils';
+import LegalAnalyzerView from './LegalAnalyzerView.js';
+import { extractTextFromPDF } from '../utils/pdfUtils.js';
 
 const LegalAnalyzer = () => {
   // State

@@ -39,7 +39,7 @@ import {
 	Copy,
 	Gavel,
 } from 'lucide-react';
-import ChatInterface from './ChatInterface';
+import ChatInterface from './ChatInterface.js';
 
 // --- SUB-COMPONENTS ---
 

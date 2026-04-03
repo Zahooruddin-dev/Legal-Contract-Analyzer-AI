@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import LegalAnalyzer from './components/LegalAnalyzer'
+import LegalAnalyzer from './components/LegalAnalyzer.js'
 
 function App() {
 
