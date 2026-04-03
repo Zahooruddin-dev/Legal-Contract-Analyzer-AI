@@ -3,9 +3,9 @@ import {
   MessageSquare, Users, Gavel, Loader2, Send, Paperclip,
   RotateCcw, Sparkles
 } from 'lucide-react';
+import {type SuggestedQueryTypes} from '../types/interface.js';
 
-
-const SuggestedQuery = ({ text, onClick }) => (
+const SuggestedQuery = ({ text, onClick  } : SuggestedQueryTypes) => (
   <button 
     onClick={() => onClick(text)}
     className="text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 px-3 py-1.5 rounded-full transition-colors"
@@ -14,10 +14,10 @@ const SuggestedQuery = ({ text, onClick }) => (
   </button>
 );
 
-const MessageBubble = ({ message, onRegenerate, index }) => {
+const MessageBubble = ({ message, onRegenerate, index } : { message: any; onRegenerate: (index: number) => void; index: number }) => {
   const isUser = message.role === 'user';
   
-  const formatContent = (text) => {
+  const formatContent = (text : string) => {
     if (!text) return text;
     
     let formatted = text;
