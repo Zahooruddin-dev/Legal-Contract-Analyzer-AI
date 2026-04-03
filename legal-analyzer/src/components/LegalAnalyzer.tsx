@@ -2,269 +2,210 @@ import React, { useState, useRef } from 'react';
 import LegalAnalyzerView from './LegalAnalyzerView.js';
 import { extractTextFromPDF } from '../utils/pdfUtils.js';
 import {
-	FileUploaderProps,
-	userMessageInterface,
+    TabId,
+    ChatMessage,
+    LegalAnalysis,
+    LegalAnalyzerProps,
 } from '../types/legalAnlyzerInterface.js';
-const LegalAnalyzer = () => {
-	// State
-	const [file, setFile] = useState(null);
-	const [text, setText] = useState('');
-	const [analysis, setAnalysis] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState('');
-	const [activeTab, setActiveTab] = useState('upload');
-	// Chat State
-	const [chatHistory, setChatHistory] = useState([]);
-	const [chatLoading, setChatLoading] = useState(false);
-	const fileInputRef = useRef(null);
-	const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL;
 
-// CHANGED 1: Removed `: onCitationClick`. 
-// CHANGED 2: Typed `e` as `React.ChangeEvent<HTMLInputElement>`.
-// CHANGED 3: Set the return type to `Promise<void>` because it's an async function returning nothing.
-const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-  
-  // CHANGED 4: Added `?` (Optional Chaining) in case e.target.files is null
-  const uploadedFile = e.target.files?.[0]; 
-  if (!uploadedFile) return;
+const LegalAnalyzer: React.FC<LegalAnalyzerProps> = () => {
+    const [file, setFile] = useState<File | null>(null);
+    const [text, setText] = useState<string>('');
+    const [analysis, setAnalysis] = useState<LegalAnalysis | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<TabId>('upload');
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [chatLoading, setChatLoading] = useState<boolean>(false);
 
-  setError('');
-  setFile(uploadedFile);
-  setLoading(true);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL as string;
 
-  try {
-    if (uploadedFile.type === 'application/pdf') {
-      const extractedText = await extractTextFromPDF(uploadedFile);
-      setText(extractedText);
-    } else if (uploadedFile.type === 'text/plain') {
-      const reader = new FileReader();
-      
-      // CHANGED 5: Renamed inner 'e' to 'event' to avoid clashing with the outer 'e'
-      reader.onload = (event) => {
-        // CHANGED 6: Told TypeScript this result is definitely a string
-        const content = event.target?.result as string; 
-        setText(content);
-      };
-      reader.readAsText(uploadedFile);
-    } else {
-      setError('Unsupported file format. Please upload PDF or TXT.');
-    }
-  // CHANGED 7: Added `: any` to the catch block so TypeScript lets you read err.message
-  } catch (err: any) { 
-    setError('Error reading file: ' + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+        const uploadedFile = e.target.files?.[0];
+        if (!uploadedFile) return;
 
-	const analyzeContract = async () => {
-		if (!text) {
-			setError('No document content found.');
-			return;
-		}
+        setError('');
+        setFile(uploadedFile);
+        setLoading(true);
 
-		setLoading(true);
-		setError('');
-		setAnalysis(null);
+        try {
+            if (uploadedFile.type === 'application/pdf') {
+                const extractedText = await extractTextFromPDF(uploadedFile);
+                setText(extractedText);
+            } else if (uploadedFile.type === 'text/plain') {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setText((event.target?.result as string) ?? '');
+                };
+                reader.readAsText(uploadedFile);
+            } else {
+                setError('Unsupported file format. Please upload PDF or TXT.');
+            }
+        } catch (err: unknown) {
+            setError('Error reading file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        } finally {
+            setLoading(false);
+        }
+    };
 
-		try {
-			const response = await fetch(WORKER_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					max_tokens: 4000,
-					temperature: 0.2,
-					messages: [
-						{
-							role: 'user',
-							content: `Analyze this legal document and return valid JSON (no markdown) with these keys: summary, documentType, parties, keyTerms, obligations, risks, recommendations, expiryDate, jurisdiction. \n\nDocument:\n${text}`,
-						},
-					],
-				}),
-			});
+    const analyzeContract = async (): Promise<void> => {
+        if (!text) { setError('No document content found.'); return; }
 
-			if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        setLoading(true);
+        setError('');
+        setAnalysis(null);
 
-			const data = await response.json();
-			let content = data.choices?.[0]?.message?.content || '';
-			content = content.replace(/```json|```/g, '').trim();
+        try {
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    max_tokens: 4000,
+                    temperature: 0.2,
+                    messages: [{
+                        role: 'user',
+                        content: `Analyze this legal document and return valid JSON (no markdown) with these keys: summary, documentType, parties, keyTerms, obligations, risks, recommendations, expiryDate, jurisdiction.\n\nDocument:\n${text}`,
+                    }],
+                }),
+            });
 
-			setAnalysis(JSON.parse(content));
-			setActiveTab('results');
-		} catch (err) {
-			console.error(err);
-			setError('Analysis failed. Please check the console or try again.');
-		} finally {
-			setLoading(false);
-		}
-	};
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
-	const handleChatSubmit = async (userMessage): userMessageInterface => {
-		if (!text) {
-			setChatHistory((prev) => [
-				...prev,
-				{ role: 'user', content: userMessage },
-				{
-					role: 'assistant',
-					content:
-						'Please upload a legal document first before asking questions.',
-				},
-			]);
-			return;
-		}
+            const data = await response.json();
+            const raw: string = data.choices?.[0]?.message?.content ?? '';
+            const cleaned = raw.replace(/```json|```/g, '').trim();
 
-		setChatLoading(true);
+            setAnalysis(JSON.parse(cleaned) as LegalAnalysis);
+            setActiveTab('results');
+        } catch (err: unknown) {
+            console.error(err);
+            setError('Analysis failed. Please check the console or try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-		// Optimistically add user message
-		const newHistory = [...chatHistory, { role: 'user', content: userMessage }];
-		setChatHistory(newHistory);
+    const handleChatSubmit = async (userMessage: string): Promise<void> => {
+        if (!text) {
+            setChatHistory((prev) => [
+                ...prev,
+                { role: 'user', content: userMessage },
+                { role: 'assistant', content: 'Please upload a legal document first before asking questions.' },
+            ]);
+            return;
+        }
 
-		try {
-			// Enhanced system prompt with context
-			const systemPrompt = `You are an expert legal assistant specializing in contract analysis. Your role is to help users understand their legal documents by answering questions clearly and professionally.
+        setChatLoading(true);
+        const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', content: userMessage }];
+        setChatHistory(newHistory);
 
-IMPORTANT INSTRUCTIONS:
-- Answer based SPECIFICALLY on the contract text provided below
-- Use markdown formatting for better readability (bold, lists, headings)
-- Be precise and cite specific clauses when relevant
-- If information isn't in the contract, clearly state that
-- Use professional but accessible language
-- Break down complex legal terms into simple explanations
-- When listing items, use bullet points or numbered lists
-- Highlight key terms and important phrases in **bold**
-- Include citation markers like [cite:123-145] when referencing specific parts of the document
+        const analysisContext = analysis
+            ? `ANALYZED DOCUMENT SUMMARY:
+- Document Type: ${analysis.documentType ?? 'Not specified'}
+- Parties: ${analysis.parties?.map((p) => p.name ?? p.party ?? '').join(', ') || 'Not identified'}
+- Key Terms: ${analysis.keyTerms?.map((t) => `${t.term ?? t.name}: ${t.definition ?? ''}`).join('; ') || 'None'}
+- Jurisdiction: ${analysis.jurisdiction ?? 'Not specified'}\n\n`
+            : '';
 
-${
-	analysis
-		? `ANALYZED DOCUMENT SUMMARY:
-- Document Type: ${analysis.documentType || 'Not specified'}
-- Parties: ${analysis.parties?.join(', ') || 'Not identified'}
-- Key Terms: ${analysis.keyTerms?.map((t) => `${t.term}: ${t.definition}`).join('; ') || 'None'}
-- Jurisdiction: ${analysis.jurisdiction || 'Not specified'}
+        const systemPrompt = `You are an expert legal assistant. Answer based SPECIFICALLY on the contract text. Use markdown formatting. Cite clauses with [cite:start-end] markers. Be precise and accessible.\n\n${analysisContext}CONTRACT TEXT:\n${text.substring(0, 8000)}${text.length > 8000 ? '...(truncated)' : ''}\n\nAnswer the user's question about this contract:`;
 
-`
-		: ''
-}CONTRACT TEXT:
-${text.substring(0, 8000)}${text.length > 8000 ? '...(truncated)' : ''}
+        try {
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    max_tokens: 1500,
+                    temperature: 0.3,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        ...newHistory.map(({ role, content }) => ({ role, content })),
+                    ],
+                }),
+            });
 
-Answer the user's question about this contract:`;
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
-			const response = await fetch(WORKER_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					max_tokens: 1500,
-					temperature: 0.3,
-					messages: [
-						{ role: 'system', content: systemPrompt },
-						...newHistory.map((msg) => ({
-							role: msg.role,
-							content: msg.content,
-						})),
-					],
-				}),
-			});
+            const data = await response.json();
+            const botReply: string = data.choices?.[0]?.message?.content ?? "I couldn't process that request.";
+            setChatHistory((prev) => [...prev, { role: 'assistant', content: botReply }]);
+        } catch (err: unknown) {
+            console.error('Chat error:', err);
+            setChatHistory((prev) => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' }]);
+        } finally {
+            setChatLoading(false);
+        }
+    };
 
-			if (!response.ok) throw new Error(`API Error: ${response.status}`);
+    const onRegenerate = async (messageIndex: number): Promise<void> => {
+        if (!chatHistory.length || messageIndex < 1 || messageIndex >= chatHistory.length) {
+            console.warn('Regenerate failed: invalid index');
+            return;
+        }
 
-			const data = await response.json();
-			const botReply =
-				data.choices?.[0]?.message?.content ||
-				"I couldn't process that request.";
+        const previousMessage = chatHistory[messageIndex - 1];
+        if (previousMessage?.role !== 'user') {
+            console.warn('Regenerate failed: previous message was not a user prompt');
+            return;
+        }
 
-			setChatHistory((prev) => [
-				...prev,
-				{ role: 'assistant', content: botReply },
-			]);
-		} catch (err) {
-			console.error('Chat error:', err);
-			setChatHistory((prev) => [
-				...prev,
-				{
-					role: 'assistant',
-					content:
-						'Sorry, I encountered an error connecting to the AI. Please try again.',
-				},
-			]);
-		} finally {
-			setChatLoading(false);
-		}
-	};
+        const trimmed = [...chatHistory];
+        trimmed.splice(messageIndex, 1);
+        setChatHistory(trimmed);
+        await handleChatSubmit(previousMessage.content);
+    };
 
-	const onRegenerate = async (messageIndex) => {
-		if (
-			!chatHistory ||
-			messageIndex < 0 ||
-			messageIndex >= chatHistory.length
-		) {
-			console.warn('Regenerate failed: Invalid index or empty history');
-			return;
-		}
-		const userMessageIndex = messageIndex - 1;
-		const previousMessage = chatHistory[userMessageIndex];
-		if (!previousMessage || previousMessage.role !== 'user') {
-			console.warn('Regenerate failed: Previous message was not a user prompt');
-			return;
-		}
-		const userMessage = previousMessage.content;
-		const newHistory = [...chatHistory];
-		newHistory.splice(messageIndex, 1);
-		setChatHistory(newHistory);
-		await handleChatSubmit(userMessage);
-	};
-	const onCitationClick = (start, end): onCitationClick => {
-		console.log(`Citation clicked: ${start}-${end}`);
-	};
+    const onCitationClick = (start: number, end: number): void => {
+        console.log(`Citation clicked: ${start}-${end}`);
+    };
 
-	const onHighlightCitation = (start, end) => {
-		console.log(`Highlighting: ${start}-${end}`);
-	};
+    const onHighlightCitation = (start: number, end: number): void => {
+        console.log(`Highlighting: ${start}-${end}`);
+    };
 
-	const exportAnalysis = () => {
-		if (!analysis) return;
-		const blob = new Blob([JSON.stringify(analysis, null, 2)], {
-			type: 'application/json',
-		});
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = `legal-analysis.json`;
-		link.click();
-		URL.revokeObjectURL(url);
-	};
+    const exportAnalysis = (): void => {
+        if (!analysis) return;
+        const blob = new Blob([JSON.stringify(analysis, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'legal-analysis.json';
+        link.click();
+        URL.revokeObjectURL(url);
+    };
 
-	const resetAnalysis = () => {
-		setFile(null);
-		setText('');
-		setAnalysis(null);
-		setChatHistory([]);
-		setActiveTab('upload');
-		if (fileInputRef.current) fileInputRef.current.value = '';
-	};
+    const resetAnalysis = (): void => {
+        setFile(null);
+        setText('');
+        setAnalysis(null);
+        setChatHistory([]);
+        setActiveTab('upload');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
 
-	return (
-		<LegalAnalyzerView
-			file={file}
-			text={text}
-			setText={setText}
-			analysis={analysis}
-			loading={loading}
-			error={error}
-			activeTab={activeTab}
-			setActiveTab={setActiveTab}
-			fileInputRef={fileInputRef}
-			handleFileUpload={handleFileUpload}
-			analyzeContract={analyzeContract}
-			resetAnalysis={resetAnalysis}
-			exportAnalysis={exportAnalysis}
-			chatHistory={chatHistory}
-			handleChatSubmit={handleChatSubmit}
-			chatLoading={chatLoading}
-			onRegenerate={onRegenerate}
-			onCitationClick={onCitationClick}
-			onHighlightCitation={onHighlightCitation}
-		/>
-	);
+    return (
+        <LegalAnalyzerView
+            file={file}
+            text={text}
+            setText={setText}
+            analysis={analysis}
+            loading={loading}
+            error={error}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            fileInputRef={fileInputRef}
+            handleFileUpload={handleFileUpload}
+            analyzeContract={analyzeContract}
+            resetAnalysis={resetAnalysis}
+            exportAnalysis={exportAnalysis}
+            chatHistory={chatHistory}
+            handleChatSubmit={handleChatSubmit}
+            chatLoading={chatLoading}
+            onRegenerate={onRegenerate}
+            onCitationClick={onCitationClick}
+            onHighlightCitation={onHighlightCitation}
+        />
+    );
 };
 
 export default LegalAnalyzer;
