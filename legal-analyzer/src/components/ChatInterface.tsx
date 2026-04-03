@@ -264,8 +264,6 @@ const ChatInterface = ({
 }: ChatInterface) => {
 	const [input, setInput] = useState('');
 	const bottomRef = useRef<HTMLDivElement | null>(null);
-
-	// Auto-scroll to bottom
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 	}, [chatHistory, loading]);
@@ -279,7 +277,7 @@ const ChatInterface = ({
 	};
 
 	const handleRegenerateLast = () => {
-		const lastAssistantIndex = chatHistory.length - 1;
+		const lastAssistantIndex : number = chatHistory.length - 1;
 		if (
 			lastAssistantIndex >= 0 &&
 			chatHistory[lastAssistantIndex].role === 'assistant'
