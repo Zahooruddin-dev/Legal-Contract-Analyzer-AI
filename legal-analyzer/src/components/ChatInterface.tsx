@@ -13,7 +13,8 @@ import {
 	type SuggestedQueryTypes,
 	ChatHeaderProps,
 	MessageBubbleProps,
-  ChatInput
+	ChatInput,
+  onSuggestedQueryType
 } from '../types/interface.js';
 
 const SuggestedQuery = ({ text, onClick }: SuggestedQueryTypes) => (
@@ -177,7 +178,7 @@ const ChatHeader = ({
 	);
 };
 
-const ChatInput = ({ input, setInput, onSend, loading }:ChatInput) => {
+const ChatInput = ({ input, setInput, onSend, loading }: ChatInput) => {
 	const handleSubmit = () => {
 		if (!input.trim()) return;
 		onSend(input);
@@ -225,7 +226,7 @@ const ChatInput = ({ input, setInput, onSend, loading }:ChatInput) => {
 	);
 };
 
-const EmptyState = ({ onSuggestedQuery }) => (
+const EmptyState = ({ onSuggestedQuery }: onSuggestedQueryType) => (
 	<div className='h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60'>
 		<div className='p-4 bg-slate-800 rounded-full'>
 			<MessageSquare className='w-8 h-8 text-slate-400' />

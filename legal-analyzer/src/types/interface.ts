@@ -32,7 +32,16 @@ interface MessageBubbleProps {
 	onRegenerate: (index: number) => void;
 	index: number;
 }
+interface onSuggestedQueryType {
+  onSuggestedQuery: () => void;
+}
+interface ChatInterface {
+  onSuggestedQuery: () => void;
+}
+
+// Usage in component:
 export type {
+  onSuggestedQueryType,
 	SuggestedQueryTypes,
 	ChatHeaderProps,
 	MessageBubbleProps,
