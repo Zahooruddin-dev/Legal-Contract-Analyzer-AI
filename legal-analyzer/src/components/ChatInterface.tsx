@@ -3,7 +3,7 @@ import {
   MessageSquare, Users, Gavel, Loader2, Send, Paperclip,
   RotateCcw, Sparkles
 } from 'lucide-react';
-import {type SuggestedQueryTypes} from '../types/interface.js';
+import {type SuggestedQueryTypes,ChatHeaderProps} from '../types/interface.js';
 
 const SuggestedQuery = ({ text, onClick  } : SuggestedQueryTypes) => (
   <button 
@@ -99,7 +99,7 @@ const LoadingIndicator = () => (
   </div>
 );
 
-const ChatHeader = ({ onRegenerateLast, loading, chatHistory }) => {
+const ChatHeader = ({ onRegenerateLast, loading, chatHistory } : ChatHeaderProps) => {
   const canRegenerate = !loading && 
     chatHistory.length > 0 && 
     chatHistory[chatHistory.length - 1]?.role === 'assistant';
