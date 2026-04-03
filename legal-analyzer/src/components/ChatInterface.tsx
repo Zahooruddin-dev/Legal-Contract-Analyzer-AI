@@ -4,6 +4,7 @@ import {
   RotateCcw, Sparkles
 } from 'lucide-react';
 
+
 const SuggestedQuery = ({ text, onClick }) => (
   <button 
     onClick={() => onClick(text)}

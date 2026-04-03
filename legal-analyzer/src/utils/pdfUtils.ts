@@ -1,13 +1,12 @@
 import { extractText } from 'unpdf';
 
-export const extractTextFromPDF = async (file) => {
+export const extractTextFromPDF = async (file: File ) => {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const { text, totalPages } = await extractText(arrayBuffer, {
-      mergePages: false // Get array of page texts
+      mergePages: false 
     });
     
-    // Combine pages with page markers
     let fullText = '';
     if (Array.isArray(text)) {
       text.forEach((pageText, index) => {
@@ -17,7 +16,6 @@ export const extractTextFromPDF = async (file) => {
       fullText = text;
     }
     
-    // Clean the text
     const cleanText = fullText
       .replace(/\s+/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
