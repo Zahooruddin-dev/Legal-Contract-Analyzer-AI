@@ -12,7 +12,7 @@ interface ChatHeaderProps {
 }
 interface MessageBubbleProps {
 	message: {
-		role: 'user' | 'assistant';
+	role: string;
 		content: string;
 	};
 	onRegenerate: (index: number) => void;
@@ -20,20 +20,13 @@ interface MessageBubbleProps {
 }
 interface ChatInput {
 	input: string;
-	setInput: (index: string) => void;
+	setInput: (input: string) => void;
 	onSend: (index: string) => void;
 	loading: boolean;
 }
-interface MessageBubbleProps {
-	message: {
-		role: 'user' | 'assistant';
-		content: string;
-	};
-	onRegenerate: (index: number) => void;
-	index: number;
-}
+
 interface onSuggestedQueryType {
-	onSuggestedQuery: () => void;
+	onSuggestedQuery: (text: string) => void;
 }
 interface ChatInterface {
 	chatHistory: {
