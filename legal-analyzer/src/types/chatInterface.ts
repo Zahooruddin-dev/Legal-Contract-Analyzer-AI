@@ -22,7 +22,7 @@ interface ChatInput {
 	input: string;
 	setInput: (index: string) => void;
 	onSend: (index: string) => void;
-	loading: (index: boolean) => void;
+	loading:  boolean;
 }
 interface MessageBubbleProps {
 	message: {

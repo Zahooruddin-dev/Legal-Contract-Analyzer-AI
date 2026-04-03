@@ -16,7 +16,7 @@ import {
 	ChatInput,
 	onSuggestedQueryType,
 	ChatInterface,
-} from '../types/interface.js';
+} from '../types/chatInterface.js';
 
 const SuggestedQuery = ({ text, onClick }: SuggestedQueryTypes) => (
 	<button
@@ -263,14 +263,14 @@ const ChatInterface = ({
 	onRegenerate,
 }: ChatInterface) => {
 	const [input, setInput] = useState('');
-	const bottomRef = useRef(null);
+	const bottomRef = useRef<HTMLDivElement | null>(null);
 
 	// Auto-scroll to bottom
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
 	}, [chatHistory, loading]);
 
-	const handleSend = (message) => {
+	const handleSend = (message: string) => {
 		const finalMessage = message || input;
 		if (!finalMessage.trim()) return;
 
@@ -288,7 +288,7 @@ const ChatInterface = ({
 		}
 	};
 
-	const handleSuggestedQuery = (text) => {
+	const handleSuggestedQuery = (text: string) => {
 		setInput(text);
 	};
 
