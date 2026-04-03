@@ -13,9 +13,10 @@ import {
 	type SuggestedQueryTypes,
 	ChatHeaderProps,
 	MessageBubbleProps,
-	ChatInput,
+	ChatInputProps,
 	onSuggestedQueryType,
-	ChatInterface,
+	ChatInterfaceProps,
+  
 } from '../types/chatInterface.js';
 
 const SuggestedQuery = ({ text, onClick }: SuggestedQueryTypes) => (
@@ -179,7 +180,7 @@ const ChatHeader = ({
 	);
 };
 
-const ChatInput = ({ input, setInput, onSend, loading }: ChatInput) => {
+const ChatInput = ({ input, setInput, onSend, loading }: ChatInputProps) => {
 	const handleSubmit = () => {
 		if (!input.trim()) return;
 		onSend(input);
@@ -261,7 +262,7 @@ const ChatInterface = ({
 	onSendMessage,
 	loading = false,
 	onRegenerate,
-}: ChatInterface) => {
+}: ChatInterfaceProps) => {
 	const [input, setInput] = useState('');
 	const bottomRef = useRef<HTMLDivElement | null>(null);
 	useEffect(() => {

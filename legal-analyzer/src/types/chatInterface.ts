@@ -18,7 +18,7 @@ interface MessageBubbleProps {
 	onRegenerate: (index: number) => void;
 	index: number;
 }
-interface ChatInput {
+interface ChatInputProps {
 	input: string;
 	setInput: (input: string) => void;
 	onSend: (index: string) => void;
@@ -28,7 +28,7 @@ interface ChatInput {
 interface onSuggestedQueryType {
 	onSuggestedQuery: (text: string) => void;
 }
-interface ChatInterface {
+interface ChatInterfaceProps {
 	chatHistory: {
 		role: string;
 		content: string;
@@ -44,6 +44,6 @@ export type {
 	SuggestedQueryTypes,
 	ChatHeaderProps,
 	MessageBubbleProps,
-	ChatInput,
-	ChatInterface,
+	ChatInputProps,
+	ChatInterfaceProps,
 };
