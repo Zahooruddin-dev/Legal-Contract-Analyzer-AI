@@ -14,7 +14,8 @@ import {
 	ChatHeaderProps,
 	MessageBubbleProps,
 	ChatInput,
-  onSuggestedQueryType
+	onSuggestedQueryType,
+	ChatInterface,
 } from '../types/interface.js';
 
 const SuggestedQuery = ({ text, onClick }: SuggestedQueryTypes) => (
@@ -260,7 +261,7 @@ const ChatInterface = ({
 	onSendMessage,
 	loading = false,
 	onRegenerate,
-}) => {
+}: ChatInterface) => {
 	const [input, setInput] = useState('');
 	const bottomRef = useRef(null);
 

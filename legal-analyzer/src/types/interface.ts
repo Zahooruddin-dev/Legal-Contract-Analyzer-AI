@@ -20,9 +20,9 @@ interface MessageBubbleProps {
 }
 interface ChatInput {
 	input: string;
-	setInput: (index: number) => void;
-	onSend: (index: number) => void;
-	loading: (index: number) => void;
+	setInput: (index: string) => void;
+	onSend: (index: string) => void;
+	loading: (index: boolean) => void;
 }
 interface MessageBubbleProps {
 	message: {
