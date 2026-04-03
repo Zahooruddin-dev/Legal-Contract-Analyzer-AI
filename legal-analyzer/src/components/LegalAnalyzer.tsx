@@ -13,41 +13,49 @@ const LegalAnalyzer = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [activeTab, setActiveTab] = useState('upload');
-
 	// Chat State
 	const [chatHistory, setChatHistory] = useState([]);
 	const [chatLoading, setChatLoading] = useState(false);
-
 	const fileInputRef = useRef(null);
-
-	// Use Environment Variable
 	const WORKER_URL = import.meta.env.VITE_ENV_WORKER_URL;
 
-	const handleFileUpload = async (e): onCitationClick => {
-		const uploadedFile = e.target.files[0];
-		if (!uploadedFile) return;
+// CHANGED 1: Removed `: onCitationClick`. 
+// CHANGED 2: Typed `e` as `React.ChangeEvent<HTMLInputElement>`.
+// CHANGED 3: Set the return type to `Promise<void>` because it's an async function returning nothing.
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+  
+  // CHANGED 4: Added `?` (Optional Chaining) in case e.target.files is null
+  const uploadedFile = e.target.files?.[0]; 
+  if (!uploadedFile) return;
 
-		setError('');
-		setFile(uploadedFile);
-		setLoading(true);
+  setError('');
+  setFile(uploadedFile);
+  setLoading(true);
 
-		try {
-			if (uploadedFile.type === 'application/pdf') {
-				const extractedText = await extractTextFromPDF(uploadedFile);
-				setText(extractedText);
-			} else if (uploadedFile.type === 'text/plain') {
-				const reader = new FileReader();
-				reader.onload = (e) => setText(e.target.result);
-				reader.readAsText(uploadedFile);
-			} else {
-				setError('Unsupported file format. Please upload PDF or TXT.');
-			}
-		} catch (err) {
-			setError('Error reading file: ' + err.message);
-		} finally {
-			setLoading(false);
-		}
-	};
+  try {
+    if (uploadedFile.type === 'application/pdf') {
+      const extractedText = await extractTextFromPDF(uploadedFile);
+      setText(extractedText);
+    } else if (uploadedFile.type === 'text/plain') {
+      const reader = new FileReader();
+      
+      // CHANGED 5: Renamed inner 'e' to 'event' to avoid clashing with the outer 'e'
+      reader.onload = (event) => {
+        // CHANGED 6: Told TypeScript this result is definitely a string
+        const content = event.target?.result as string; 
+        setText(content);
+      };
+      reader.readAsText(uploadedFile);
+    } else {
+      setError('Unsupported file format. Please upload PDF or TXT.');
+    }
+  // CHANGED 7: Added `: any` to the catch block so TypeScript lets you read err.message
+  } catch (err: any) { 
+    setError('Error reading file: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
 	const analyzeContract = async () => {
 		if (!text) {
